@@ -41,3 +41,10 @@ app-example
 # generated native folders
 /ios
 /android
+# Firebase / Google secrets
+google-services.json
+*-firebase-adminsdk-*.json
+
+# Supabase secrets
+supabase/functions/push-worker/.env
+supabase/functions/push-worker/secrets.json

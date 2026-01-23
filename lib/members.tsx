@@ -3,16 +3,29 @@ import React, { createContext, useContext, useEffect, useMemo, useRef, useState 
 import { Alert } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { supabase } from "./supabase";
-import { tr } from "./locale";
 
-const MEMBERS_KEY_V2 = "famigo.members.v2";
+// NOTE: Members is used very early in app boot. Avoid hard dependency on locale hooks.
+// Use safe fallbacks here so Settings/Join doesn't crash if locale module shape changes.
+function trSafe(key: string): string {
+  if (key === "members.defaultFamilyName") return "Family";
+  if (key === "members.errorTitle") return "Error";
+  return "";
+}
+
+const MEMBERS_KEY_V3 = "famigo.members.v3";
 
 export type MemberRole = "parent" | "child";
 
 export type Member = {
+  // In-app member id is the auth user_id (so we can compare with session.user.id)
   id: string;
   name: string;
   role: MemberRole;
+
+  // New: profile fields used for avatars & Settings UI
+  gender?: "male" | "female" | null;
+  avatarKey?: string | null;
+
   createdAt: number;
 };
 
@@ -25,7 +38,7 @@ type FamilyInfo = {
   inviteCode: string;
 };;
 
-type SnapshotV2 = {
+type SnapshotV3 = {
   family: FamilyInfo | null;
   members: Member[];
   myId: string | null;
@@ -50,7 +63,7 @@ type MembersContextValue = {
   isParent: boolean;
   members: Member[];
 
-  refreshMembers: () => Promise<void>;
+  refreshMembers: (force?: boolean) => Promise<void>;
 
   createFamily: (familyName: string) => Promise<boolean>;
   joinFamilyWithCode: (code: string) => Promise<boolean>;
@@ -70,9 +83,9 @@ const MembersContext = createContext<MembersContextValue | null>(null);
 const safeName = (v: string) => String(v ?? "").trim().replace(/\s+/g, " ").slice(0, 40);
 const cleanInviteCode = (v: string) => String(v ?? "").trim().toUpperCase().replace(/\s+/g, "");
 
-async function persistSnapshot(s: SnapshotV2) {
+async function persistSnapshot(s: SnapshotV3) {
   try {
-    await AsyncStorage.setItem(MEMBERS_KEY_V2, JSON.stringify(s));
+    await AsyncStorage.setItem(MEMBERS_KEY_V3, JSON.stringify(s));
   } catch {
     // ignore
   }
@@ -80,15 +93,15 @@ async function persistSnapshot(s: SnapshotV2) {
 
 async function clearSnapshot() {
   try {
-    await AsyncStorage.removeItem(MEMBERS_KEY_V2);
+    await AsyncStorage.removeItem(MEMBERS_KEY_V3);
   } catch {
     // ignore
   }
 }
 
-async function loadSnapshot(): Promise<SnapshotV2 | null> {
+async function loadSnapshot(): Promise<SnapshotV3 | null> {
   try {
-    const raw = await AsyncStorage.getItem(MEMBERS_KEY_V2);
+    const raw = await AsyncStorage.getItem(MEMBERS_KEY_V3);
     return raw ? JSON.parse(raw) : null;
   } catch {
     return null;
@@ -117,6 +130,10 @@ async function loadFamilyAndMembers(): Promise<{ family: FamilyInfo | null; memb
     id: String(r.user_id),
     name: safeName(r.display_name),
     role: r.role === "parent" ? "parent" : "child",
+
+    gender: r.gender === "female" ? "female" : r.gender === "male" ? "male" : null,
+    avatarKey: r.avatar_key ? String(r.avatar_key) : null,
+
     createdAt: typeof r.created_at === "string" ? Date.parse(r.created_at) : Date.now(),
   }));
 
@@ -125,7 +142,7 @@ async function loadFamilyAndMembers(): Promise<{ family: FamilyInfo | null; memb
     family: {
       id: famId,
       familyId: famId,
-      familyName: String(fam.name ?? "").trim() || tr("members.defaultFamilyName"),
+      familyName: String(fam.name ?? "").trim() || trSafe("members.defaultFamilyName"),
       inviteCode: String(fam.invite_code ?? "").trim(),
     },
     members,
@@ -141,9 +158,10 @@ export function MembersProvider({ children }: { children: React.ReactNode }) {
   const [me, setMe] = useState<Member | null>(null);
 
   const loading = useRef(false);
+  const snapshotMyIdRef = useRef<string | null>(null);
 
-  const refreshMembers = async () => {
-    if (loading.current) return;
+  const refreshMembers = async (force?: boolean) => {
+    if (loading.current && !force) return;
     loading.current = true;
 
     try {
@@ -152,6 +170,17 @@ export function MembersProvider({ children }: { children: React.ReactNode }) {
 
       const uid = s.session?.user?.id ?? null;
       setMyId(uid);
+
+      // If we loaded a cached snapshot for a different user, clear it to avoid wrong routing (stale family/me).
+      if (uid && snapshotMyIdRef.current && snapshotMyIdRef.current !== uid) {
+        snapshotMyIdRef.current = uid;
+        setFamily(null);
+        setMembers([]);
+        setMe(null);
+        await clearSnapshot();
+      } else if (!uid) {
+        snapshotMyIdRef.current = null;
+      }
 
       if (!uid) {
         setFamily(null);
@@ -165,7 +194,11 @@ export function MembersProvider({ children }: { children: React.ReactNode }) {
       const { family: f, members: list } = await loadFamilyAndMembers();
       const my = list.find((m) => m.id === uid) ?? null;
 
-      setFamily(f);
+      // SAFETY: treat as "not in family" unless the current user is actually present in the members list.
+      // This prevents accidental routing to Home due to a buggy my_family() or stale server data.
+      const effectiveFamily = my ? f : null;
+
+      setFamily(effectiveFamily);
       setMembers(list);
       setMe(my);
 
@@ -178,8 +211,14 @@ export function MembersProvider({ children }: { children: React.ReactNode }) {
       setReady(true);
     } catch (e: any) {
       console.log("[members] refreshMembers error", e);
-      Alert.alert(tr("members.errorTitle"), String(e?.message ?? e));
+      // IMPORTANT: on error, clear cached state so we don't route user to the wrong place (stale snapshot).
+      setFamily(null);
+      setMembers([]);
+      setMe(null);
+      await clearSnapshot();
+      Alert.alert(trSafe("members.errorTitle"), String(e?.message ?? e));
       setReady(true);
+
     } finally {
       loading.current = false;
     }
@@ -188,6 +227,7 @@ export function MembersProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     loadSnapshot().then((s) => {
       if (s) {
+        snapshotMyIdRef.current = s.myId ?? null;
         setFamily(s.family);
         setMembers(s.members);
         setMyId(s.myId);
@@ -229,13 +269,13 @@ export function MembersProvider({ children }: { children: React.ReactNode }) {
             display_name: me?.name ?? null,
           });
           if (error) {
-            Alert.alert(tr("members.errorTitle"), error.message);
+            Alert.alert(trSafe("members.errorTitle"), error.message);
             return false;
           }
           await refreshMembers();
           return true;
         } catch (e: any) {
-          Alert.alert(tr("members.errorTitle"), String(e?.message ?? e));
+          Alert.alert(trSafe("members.errorTitle"), String(e?.message ?? e));
           return false;
         }
       },
@@ -247,13 +287,13 @@ export function MembersProvider({ children }: { children: React.ReactNode }) {
             display_name: me?.name ?? null,
           });
           if (error) {
-            Alert.alert(tr("members.errorTitle"), error.message);
+            Alert.alert(trSafe("members.errorTitle"), error.message);
             return false;
           }
           await refreshMembers();
           return true;
         } catch (e: any) {
-          Alert.alert(tr("members.errorTitle"), String(e?.message ?? e));
+          Alert.alert(trSafe("members.errorTitle"), String(e?.message ?? e));
           return false;
         }
       },
@@ -262,13 +302,13 @@ export function MembersProvider({ children }: { children: React.ReactNode }) {
         try {
           const { error } = await supabase.rpc("leave_family");
           if (error) {
-            Alert.alert(tr("members.errorTitle"), error.message);
+            Alert.alert(trSafe("members.errorTitle"), error.message);
             return false;
           }
           await refreshMembers();
           return true;
         } catch (e: any) {
-          Alert.alert(tr("members.errorTitle"), String(e?.message ?? e));
+          Alert.alert(trSafe("members.errorTitle"), String(e?.message ?? e));
           return false;
         }
       },
@@ -277,13 +317,13 @@ export function MembersProvider({ children }: { children: React.ReactNode }) {
         try {
           const { error } = await supabase.rpc("delete_family");
           if (error) {
-            Alert.alert(tr("members.errorTitle"), error.message);
+            Alert.alert(trSafe("members.errorTitle"), error.message);
             return false;
           }
           await refreshMembers();
           return true;
         } catch (e: any) {
-          Alert.alert(tr("members.errorTitle"), String(e?.message ?? e));
+          Alert.alert(trSafe("members.errorTitle"), String(e?.message ?? e));
           return false;
         }
       },
@@ -292,13 +332,13 @@ export function MembersProvider({ children }: { children: React.ReactNode }) {
         try {
           const { error } = await supabase.rpc("rename_me", { new_name: safeName(n) });
           if (error) {
-            Alert.alert(tr("members.errorTitle"), error.message);
+            Alert.alert(trSafe("members.errorTitle"), error.message);
             return false;
           }
           await refreshMembers();
           return true;
         } catch (e: any) {
-          Alert.alert(tr("members.errorTitle"), String(e?.message ?? e));
+          Alert.alert(trSafe("members.errorTitle"), String(e?.message ?? e));
           return false;
         }
       },
@@ -310,13 +350,13 @@ export function MembersProvider({ children }: { children: React.ReactNode }) {
             new_name: safeName(n),
           });
           if (error) {
-            Alert.alert(tr("members.errorTitle"), error.message);
+            Alert.alert(trSafe("members.errorTitle"), error.message);
             return false;
           }
           await refreshMembers();
           return true;
         } catch (e: any) {
-          Alert.alert(tr("members.errorTitle"), String(e?.message ?? e));
+          Alert.alert(trSafe("members.errorTitle"), String(e?.message ?? e));
           return false;
         }
       },
@@ -328,13 +368,13 @@ export function MembersProvider({ children }: { children: React.ReactNode }) {
             new_role: role,
           });
           if (error) {
-            Alert.alert(tr("members.errorTitle"), error.message);
+            Alert.alert(trSafe("members.errorTitle"), error.message);
             return false;
           }
           await refreshMembers();
           return true;
         } catch (e: any) {
-          Alert.alert(tr("members.errorTitle"), String(e?.message ?? e));
+          Alert.alert(trSafe("members.errorTitle"), String(e?.message ?? e));
           return false;
         }
       },
@@ -343,13 +383,13 @@ export function MembersProvider({ children }: { children: React.ReactNode }) {
         try {
           const { error } = await supabase.rpc("remove_member", { member_id: id });
           if (error) {
-            Alert.alert(tr("members.errorTitle"), error.message);
+            Alert.alert(trSafe("members.errorTitle"), error.message);
             return false;
           }
           await refreshMembers();
           return true;
         } catch (e: any) {
-          Alert.alert(tr("members.errorTitle"), String(e?.message ?? e));
+          Alert.alert(trSafe("members.errorTitle"), String(e?.message ?? e));
           return false;
         }
       },

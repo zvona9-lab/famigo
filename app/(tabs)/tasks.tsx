@@ -3,16 +3,20 @@ import React, { useMemo, useState, useEffect } from "react";
 import {
   Alert,
   FlatList,
+  Keyboard,
+  KeyboardAvoidingView,
   Modal,
   Platform,
   Pressable,
   ScrollView,
+  StyleSheet,
+  Switch,
   Text,
   TextInput,
   View,
+  Image,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-
 
 import { Screen } from "../../src/ui/components/Screen";
 import { Card } from "../../src/ui/components/Card";
@@ -24,6 +28,9 @@ import { useT } from "../../lib/useT";
 import { useTasks, Task } from "../../lib/tasks";
 import { useMembers } from "../../lib/members";
 
+const TASKS_HEADER_IMG = require("../../assets/avatars/stats/header-tasks.png");
+
+
 // Optional native date picker (if installed)
 let DateTimePicker: any = null;
 try {
@@ -31,6 +38,15 @@ try {
   DateTimePicker = require("@react-native-community/datetimepicker").default;
 } catch {
   DateTimePicker = null;
+}
+
+// Optional gradient (if installed)
+let LinearGradient: any = null;
+try {
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  LinearGradient = require("expo-linear-gradient").LinearGradient;
+} catch {
+  LinearGradient = null;
 }
 
 function getT() {
@@ -125,7 +141,6 @@ function formatDueInline(ts: number) {
   return `${date} ${time}`;
 }
 
-
 function parseRepeatRule(raw: any): { days: number | null; autoComplete: boolean } {
   if (!raw) return { days: null, autoComplete: false };
   try {
@@ -144,28 +159,28 @@ function parseRepeatRule(raw: any): { days: number | null; autoComplete: boolean
 function buildRepeatRule(daysStr: string, autoComplete: boolean): string | null {
   const d = Number(String(daysStr || "").replace(/[^0-9]/g, ""));
   if (!Number.isFinite(d) || d <= 0) return null;
-  return JSON.stringify({ preset: "interval", days: Math.floor(d), autoComplete: !!autoComplete });
+  // We currently don't expose auto-complete without approval in UI (user requested to remove it).
+  // Keep the schema stable, but always store autoComplete=false.
+  return JSON.stringify({ preset: "interval", days: Math.floor(d), autoComplete: false });
 }
-
 
 function BottomSheet(props: { visible: boolean; onClose: () => void; children: React.ReactNode }) {
   return (
     <Modal visible={props.visible} transparent animationType="slide" onRequestClose={props.onClose}>
-      <Pressable style={styles.sheetBackdrop} onPress={props.onClose} />
-      <View style={styles.sheetWrap}>
-        <View style={styles.sheetInner}>{props.children}</View>
+      <View style={styles.modalRoot}>
+        <Pressable style={styles.sheetBackdrop} onPress={props.onClose} />
+
+        <KeyboardAvoidingView
+          // In standalone Android builds the window may not resize like Expo Go,
+          // so we must lift the sheet ourselves on BOTH platforms.
+          behavior={Platform.OS === "ios" ? "padding" : "padding"}
+          keyboardVerticalOffset={Platform.OS === "ios" ? 64 : 0}
+          style={styles.sheetWrap}
+        >
+          <View style={styles.sheetInner}>{props.children}</View>
+        </KeyboardAvoidingView>
       </View>
     </Modal>
-  );
-}
-
-function StatusBadge({ label }: { label: string }) {
-  return (
-    <View style={styles.statusBadge}>
-      <Text style={styles.statusBadgeText} numberOfLines={1}>
-        {label}
-      </Text>
-    </View>
   );
 }
 
@@ -206,19 +221,16 @@ export default function TasksScreen() {
     addTask,
     updateTask,
     deleteTask,
-    claimTask,
-    unclaimTask,
-    requestDone,
-    approveDone,
-    rejectDone,
     setAssignee,
+    acceptTask,
+    rejectTask,
     completeAuto,
   } = useTasks() as any;
 
   const { ready: membersReady, myId, me, isParent, members } = useMembers() as any;
-const myName = String(me?.name ?? tr("common.me", "Me"));
+  const myName = String(me?.name ?? tr("common.me", "Me"));
 
-  const [filter, setFilter] = useState<"all" | "active" | "review" | "done">("all");
+  const [filter, setFilter] = useState<"all" | "active" | "done">("all");
   const [nowTs, setNowTs] = useState(() => Date.now());
   useEffect(() => {
     const id = setInterval(() => setNowTs(Date.now()), 60_000);
@@ -237,15 +249,32 @@ const myName = String(me?.name ?? tr("common.me", "Me"));
 
   const [draftTimeDigits, setDraftTimeDigits] = useState("");
 
+  // ✅ reminder offset (minutes before dueAt)
+  const [draftReminderOffset, setDraftReminderOffset] = useState<null | 15 | 30 | 60>(null);
+
   // ✅ repeat (interval days) + auto-complete (no approval)
   const [draftRepeatDays, setDraftRepeatDays] = useState<string>("");
-  const [draftAutoComplete, setDraftAutoComplete] = useState<boolean>(false);
-  const [repeatOpen, setRepeatOpen] = useState<boolean>(false);
+  const [repeatEnabled, setRepeatEnabled] = useState<boolean>(false);
 
-  // ✅ assign (parent only)
+  // ✅ assign (family member)
   const [draftAssigneeId, setDraftAssigneeId] = useState<string | null>(null);
   const [draftAssigneeName, setDraftAssigneeName] = useState<string | null>(null);
   const [assigneeOpen, setAssigneeOpen] = useState(false);
+
+  // Track keyboard height so the assignee modal can sit ABOVE the keyboard.
+  const [kbH, setKbH] = useState(0);
+  useEffect(() => {
+    const onShow = (e: any) => setKbH(Number(e?.endCoordinates?.height ?? 0));
+    const onHide = () => setKbH(0);
+    const s1 = Keyboard.addListener("keyboardDidShow", onShow);
+    const s2 = Keyboard.addListener("keyboardDidHide", onHide);
+    return () => {
+      // @ts-ignore
+      s1?.remove?.();
+      // @ts-ignore
+      s2?.remove?.();
+    };
+  }, []);
 
   const [selected, setSelected] = useState<Task | null>(null);
 
@@ -256,8 +285,7 @@ const myName = String(me?.name ?? tr("common.me", "Me"));
     const list: Task[] = Array.isArray(tasks) ? tasks : [];
     let out = list;
     if (filter === "active") out = out.filter((x) => x.status !== "done");
-    if (filter === "review") out = out.filter((x) => x.status === "review");
-    if (filter === "done") out = out.filter((x) => x.status === "done");
+        if (filter === "done") out = out.filter((x) => x.status === "done");
     return out;
   }, [tasks, filter]);
 
@@ -265,9 +293,8 @@ const myName = String(me?.name ?? tr("common.me", "Me"));
     const list: Task[] = Array.isArray(tasks) ? tasks : [];
     const all = list.length;
     const done = list.filter((x) => x.status === "done").length;
-    const review = list.filter((x) => x.status === "review").length;
     const active = list.filter((x) => x.status !== "done").length;
-    return { all, active, review, done };
+    return { all, active, done };
   }, [tasks]);
 
   function openNew() {
@@ -278,11 +305,11 @@ const myName = String(me?.name ?? tr("common.me", "Me"));
     setDraftDateDDMM(ddmmFromTs(today0));
     setDraftCalendarTs(today0);
     setDraftTimeDigits("");
+    setDraftReminderOffset(null);
     setDraftAssigneeId(null);
     setDraftAssigneeName(null);
     setDraftRepeatDays("");
-    setDraftAutoComplete(false);
-    setRepeatOpen(false);
+    setRepeatEnabled(false);
     setEditOpen(true);
   }
 
@@ -299,15 +326,15 @@ const myName = String(me?.name ?? tr("common.me", "Me"));
 
       if (due0 === today0) {
         setDraftDateMode("today");
-    const today0 = startOfDay(Date.now());
-    setDraftDateDDMM(ddmmFromTs(today0));
-    setDraftCalendarTs(today0);
+        const today0b = startOfDay(Date.now());
+        setDraftDateDDMM(ddmmFromTs(today0b));
+        setDraftCalendarTs(today0b);
       } else if (due0 === tomorrow0) {
         const base0 = startOfDay(Date.now());
-                  const tomo0 = addDays(base0, 1);
-                  setDraftDateMode("tomorrow");
-                  setDraftDateDDMM(ddmmFromTs(tomo0));
-                  setDraftCalendarTs(tomo0);
+        const tomo0 = addDays(base0, 1);
+        setDraftDateMode("tomorrow");
+        setDraftDateDDMM(ddmmFromTs(tomo0));
+        setDraftCalendarTs(tomo0);
       } else {
         const y = new Date(dueTs).getFullYear();
         const thisY = new Date().getFullYear();
@@ -325,19 +352,24 @@ const myName = String(me?.name ?? tr("common.me", "Me"));
       setDraftTimeDigits(digitsOnly(new Date(dueTs).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })));
     } else {
       setDraftDateMode("today");
-    const today0 = startOfDay(Date.now());
-    setDraftDateDDMM(ddmmFromTs(today0));
-    setDraftCalendarTs(today0);
+      const today0b = startOfDay(Date.now());
+      setDraftDateDDMM(ddmmFromTs(today0b));
+      setDraftCalendarTs(today0b);
       setDraftTimeDigits("");
+      setDraftReminderOffset(null);
     }
+
+    // reminder (minutes before dueAt)
+    const ro = Number((task as any)?.reminderOffsetMinutes ?? (task as any)?.reminder_offset_minutes ?? NaN);
+    if (ro === 15 || ro === 30 || ro === 60) setDraftReminderOffset(ro as any);
+    else setDraftReminderOffset(null);
 
     setDraftAssigneeId((task as any)?.assignedToId ?? null);
     setDraftAssigneeName((task as any)?.assignedToName ?? null);
 
     const rr = parseRepeatRule((task as any)?.repeatRule ?? null);
     setDraftRepeatDays(rr.days ? String(rr.days) : "");
-    setDraftAutoComplete(!!rr.autoComplete);
-    setRepeatOpen(!!rr.days);
+    setRepeatEnabled(!!rr.days);
 
     setEditOpen(true);
   }
@@ -350,6 +382,7 @@ const myName = String(me?.name ?? tr("common.me", "Me"));
     }
 
     let dueAt: number | null = null;
+    const reminderOffsetMinutes: null | 15 | 30 | 60 = digitsOnly(draftTimeDigits) ? (draftReminderOffset as any) : null;
 
     // ✅ due is optional: if time empty -> no dueAt
     const hasTime = !!digitsOnly(draftTimeDigits);
@@ -376,7 +409,7 @@ const myName = String(me?.name ?? tr("common.me", "Me"));
 
       const combined = combineDateAndTime(date0, draftTimeDigits);
       if (combined === null) {
-        Alert.alert(tr("common.error", "Error"), tr("tasks.timeInvalid", "Time must be HHMM (e.g. 1630)."));
+        Alert.alert(tr("common.error", "Error"), tr("tasks.timeInvalid", "Time must be HH:MM (e.g. 16:30)."));
         return;
       }
       dueAt = combined;
@@ -390,16 +423,18 @@ const myName = String(me?.name ?? tr("common.me", "Me"));
         const prevAId = (selected as any)?.assignedToId ?? null;
         const prevAName = (selected as any)?.assignedToName ?? null;
 
-        const repeatRule = buildRepeatRule(draftRepeatDays, draftAutoComplete);
-        await updateTask(selected.id, { title, dueAt, repeatRule });
+        const repeatRule = repeatEnabled ? buildRepeatRule(draftRepeatDays, false) : null;
+        await updateTask(selected.id, { title, dueAt, repeatRule, reminderOffsetMinutes });
 
         // ✅ assignment change
         if (isParent && (prevAId !== aId || String(prevAName ?? "") !== String(aName ?? ""))) {
           await setAssignee?.(selected.id, aId, aName);
         }
       } else {
-        const repeatRule = buildRepeatRule(draftRepeatDays, draftAutoComplete);
-        await addTask(title, { dueAt, repeatRule, assignedToId: isParent ? aId : null, assignedToName: isParent ? aName : null });
+        const repeatRule = repeatEnabled ? buildRepeatRule(draftRepeatDays, false) : null;
+        // Allow ALL family members (including kids) to assign tasks.
+        // Backend/RLS now enforces that assignee must be in the same family.
+        await addTask(title, { dueAt, repeatRule, reminderOffsetMinutes, assignedToId: aId, assignedToName: aName });
       }
 
       setEditOpen(false);
@@ -448,20 +483,11 @@ const myName = String(me?.name ?? tr("common.me", "Me"));
     }
   }
 
-  function getStatusLabel(s: string) {
-    if (s === "open") return tr("tasks.status.open", "Open");
-    if (s === "claimed") return tr("tasks.status.claimed", "Claimed");
-    if (s === "review") return tr("tasks.status.review", tr("tasks.needsApproval", "Needs approval"));
-    if (s === "done") return tr("tasks.status.done", "Done");
-    return s;
-  }
   function getStatusBarStyle(status: string, isLate: boolean) {
     // Late overrides (unless done)
     if (isLate && status !== "done") return { backgroundColor: theme.colors.danger };
     if (status === "done") return { backgroundColor: "#22c55e" };
-    if (status === "review") return { backgroundColor: "#8b5cf6" };
-    if (status === "claimed") return { backgroundColor: "#f59e0b" };
-    // open / default
+        // open / default
     return { backgroundColor: theme.colors.primary };
   }
 
@@ -498,29 +524,24 @@ const myName = String(me?.name ?? tr("common.me", "Me"));
   }
 
   const selectedDateLabel = selectedDateTs ? formatFullDate(selectedDateTs) : "";
-
   const dateInputDisplay = formatDisplayDateFromDDMM(draftDateDDMM) || selectedDateLabel;
-
 
   function renderRow({ item }: { item: Task }) {
     const status = String(item.status ?? "open");
     const dueAt = item.dueAt ? (item.dueAt as any as number) : null;
     const dueText = dueAt ? formatDueInline(dueAt) : "";
     const isLate = !!(dueAt && status !== "done" && dueAt < nowTs);
-    const statusLabel = getStatusLabel(status);
 
-    const isMine = Boolean(myId && item.claimedById && String(item.claimedById) === String(myId));
-    const canClaim = status === "open" && (!item.assignedToId || String(item.assignedToId) === String(myId));
-    const canUnclaim = status === "claimed" && isMine;
-    const canRequest = status === "claimed" && isMine;
-    const canApprove = status === "review" && isParent;
-    const canReject = status === "review" && isParent;
-
-    const busy = actionBusyId === item.id;
+    const isUnassigned = !Boolean((item as any)?.assignedToId);
+    const isAssignee = Boolean(myId && (item as any)?.assignedToId && String((item as any).assignedToId) === String(myId));
 
     const rr = parseRepeatRule((item as any)?.repeatRule ?? null);
     const isAuto = !!rr.days && rr.autoComplete === true;
-    const canAutoDone = isAuto && status !== "done" && status !== "review";
+    const canAutoDone = isAuto && status !== "done";
+
+    const canAcceptReject = status === "open" && isAssignee;
+    const busy = actionBusyId === item.id;
+    const canTake = status === "open" && isUnassigned && !!myId;
 
     return (
       <Pressable
@@ -532,126 +553,103 @@ const myName = String(me?.name ?? tr("common.me", "Me"));
       >
         <Card style={styles.taskCard}>
           <View style={styles.taskRow}>
-          <View style={[styles.statusBar, getStatusBarStyle(status, isLate)]} />
-          <View style={styles.taskContent}>
-            <View style={styles.taskHeader}>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.taskTitle} numberOfLines={2}>
-                {String(item.title ?? "")}
-              </Text>
-
-              <View style={{ height: 6 }} />
-
-              <Text style={styles.taskMeta} numberOfLines={1}>
-                {dueAt ? (isAuto ? `${tr("tasks.nextDue", "Next due")}: ${dueText}` : `${isLate ? "⚠️ " : ""}⏰ ${dueText}`) : tr("tasks.due.none", "No due time")}
-              </Text>
-
-              {item.assignedToName ? (
-                <>
-                  <View style={{ height: 4 }} />
-                  <Text style={styles.taskMeta} numberOfLines={1}>
-                    {`${tr("tasks.assignedTo", "Assigned to")}: ${String(item.assignedToName)}`}
+            <View style={[styles.statusBar, getStatusBarStyle(status, isLate)]} />
+            <View style={styles.taskContent}>
+              <View style={styles.taskHeader}>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.taskTitle} numberOfLines={2}>
+                    {String(item.title ?? "")}
                   </Text>
-                </>
-              ) : null}
-            </View>
 
-            <StatusBadge label={statusLabel} />
-          </View>
+                  <View style={{ height: 6 }} />
 
-          {(canAutoDone || canClaim || canUnclaim || canRequest || canApprove || canReject) ? (
-            <View style={styles.actionsRow}>
-              {canAutoDone ? (
-                <Button
-                  title={tr("tasks.action.doneAuto", "Done")}
-                  onPress={() => {
-                    runAction(item, async () => {
-                      await (completeAuto as any)?.(item.id, myId ?? "", myName);
-                    });
-                  }}
-                  style={styles.actionBtn}
-                  disabled={busy}
-                />
-              ) : null}
+                  <Text style={styles.taskMeta} numberOfLines={1}>
+                    {dueAt
+                      ? isAuto
+                        ? `${tr("tasks.nextDue", "Next due")}: ${dueText}`
+                        : `${isLate ? "⚠️ " : ""}⏰ ${dueText}`
+                      : tr("tasks.due.none", "No due time")}
+                  </Text>
 
-              {canClaim ? (
-                <Button
-                  title={tr("tasks.action.claim", "Claim")}
-                  onPress={() => {
-                    if (!myId) {
-                      Alert.alert(tr("common.error", "Error"), tr("auth.missingUid", "You are not signed in (member id missing)."));
-                      return;
-                    }
-                    runAction(item, async () => {
-                      await claimTask(item.id, myId, myName);
-                    });
-                  }}
-                  style={styles.actionBtn}
-                  disabled={busy}
-                />
-              ) : null}
-
-              {canRequest ? (
-                <Button
-                  title={tr("tasks.action.requestDone", "Request done")}
-                  onPress={() => {
-                    if (!myId) {
-                      Alert.alert(tr("common.error", "Error"), tr("auth.missingUid", "You are not signed in (member id missing)."));
-                      return;
-                    }
-                    runAction(item, async () => {
-                      await requestDone(item.id, myId, myName);
-                    });
-                  }}
-                  style={styles.actionBtn}
-                  disabled={busy}
-                />
-              ) : null}
-
-              {canApprove ? (
-                <>
-                  <Button
-                    title={tr("tasks.action.approve", "Approve")}
-                    onPress={() =>
-                      runAction(item, async () => {
-                        await approveDone(item.id);
-                      })
-                    }
-                    style={styles.actionBtn}
-                    disabled={busy}
-                  />
-                  <Button
-                    title={tr("tasks.action.reject", "Reject")}
-                    onPress={() =>
-                      runAction(item, async () => {
-                        await rejectDone(item.id);
-                      })
-                    }
-                    // ✅ user traži plavo/bijelo -> i reject je primary
-                    style={[styles.actionBtn, { opacity: 0.92 }]}
-                    disabled={busy}
-                  />
-                </>
-              ) : null}
-
-              {canUnclaim ? (
-                <Button
-                  title={tr("tasks.action.unclaim", "Vrati")}
-                  variant="secondary"
-                  onPress={() =>
-                    runAction(item, async () => {
-                      await unclaimTask(item.id);
-                    })
-                  }
-                  style={styles.actionBtn}
-                  disabled={busy}
-                />
-              ) : null}
-            </View>
-          ) : null}
-                  </View>
+                  {item.assignedToName ? (
+                    <>
+                      <View style={{ height: 4 }} />
+                      <Text style={styles.taskMeta} numberOfLines={1}>
+                        {`${tr("tasks.assignedTo", "Assigned to")}: ${String(item.assignedToName)}`}
+                      </Text>
+                    </>
+                  ) : null}
                 </View>
-              </Card>
+
+                <View style={styles.statusPill}>
+                  <Text style={styles.statusPillText}>
+                    {status === "done" ? tr("tasks.badge.done", "Done") : tr("tasks.badge.open", "Open")}
+                  </Text>
+                </View>
+              </View>
+
+              {(canAutoDone || canTake || canAcceptReject) ? (
+                <View style={styles.actionsRow}>
+                  {canAutoDone ? (
+                    <Button
+                      title={tr("tasks.action.doneAuto", "Done")}
+                      onPress={() => {
+                        runAction(item, async () => {
+                          await (completeAuto as any)?.(item.id, myId ?? "", myName);
+                        });
+                      }}
+                      style={styles.actionBtn}
+                      disabled={busy}
+                    />
+                  ) : null}
+
+                  {canAcceptReject ? (
+                    <>
+                      <Button
+                        title={tr("tasks.action.accept", "Accept")}
+                        onPress={() => {
+                          runAction(item, async () => {
+                            await acceptTask?.(item.id);
+                          });
+                        }}
+                        style={styles.actionBtn}
+                        disabled={busy}
+                      />
+                      <Button
+                        title={tr("tasks.action.reject", "Reject")}
+                        variant="secondary"
+                        onPress={() => {
+                          runAction(item, async () => {
+                            await rejectTask?.(item.id);
+                          });
+                        }}
+                        style={styles.actionBtn}
+                        disabled={busy}
+                      />
+                    </>
+                  ) : null}
+
+                  {canTake ? (
+                    <Button
+                      title={tr("tasks.action.take", "Take")}
+                      onPress={() => {
+                        if (!myId) {
+                          Alert.alert(tr("common.error", "Error"), tr("auth.missingUid", "You are not signed in (member id missing)."));
+                          return;
+                        }
+                        runAction(item, async () => {
+                          await setAssignee?.(item.id, myId, myName);
+                        });
+                      }}
+                      style={styles.actionBtn}
+                      disabled={busy}
+                    />
+                  ) : null}
+                </View>
+              ) : null}
+            </View>
+          </View>
+        </Card>
       </Pressable>
     );
   }
@@ -663,37 +661,80 @@ const myName = String(me?.name ?? tr("common.me", "Me"));
       <View style={{ flex: 1, width: "100%", alignSelf: "stretch" }}>
         <ScrollView contentContainerStyle={{ paddingBottom: 24 }} showsVerticalScrollIndicator={false}>
           <View style={{ padding: 16 }}>
-            <View style={styles.heroCard}>
-              <View style={styles.heroTopRow}>
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.heroTitle}>{tr("tasks.title", "Tasks")}</Text>
-                  <Text style={styles.heroSub}>{tr("tasks.heroSub", "Quick filters and overview")}</Text>
+            {/* Header card (Title + subtitle + +New) */}
+            <View style={styles.headerOuter}>
+              <View style={styles.headerClip}>
+                {LinearGradient ? (
+                  <LinearGradient
+                    pointerEvents="none"
+                    colors={["rgba(255,255,255,0.98)", "rgba(235,244,255,0.96)"]}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                    style={styles.heroGradientFill}
+                  />
+                ) : (
+                  <View pointerEvents="none" style={styles.heroGradientFillFallback} />
+                )}
+
+                <View style={styles.heroTopRow}>
+                  <View style={styles.heroLeft}>
+                    <Text style={styles.heroTitle}>{tr("tasks.title", "Tasks")}</Text>
+                    <Text style={styles.heroSub}>{tr("tasks.heroSub", "Quick filters and overview")}</Text>
+
+                    <View style={{ height: 10 }} />
+                  </View>
                 </View>
 
-                <Button
-                  title={tr("tasks.new", "+ New")}
-                  onPress={openNew}
-                  style={{ height: 40, paddingHorizontal: 14, borderRadius: 14 }}
-                  textStyle={{ fontSize: 14, fontWeight: "800" }}
-                />
+                <View style={styles.heroAccentBg}>
+                  <View style={styles.heroAccent} />
+                </View>
               </View>
 
-              <View style={{ height: 12 }} />
+              <Image source={TASKS_HEADER_IMG} style={styles.heroArt} resizeMode="contain" />
 
-              <View style={styles.menuRow}>
-                <MenuPill big={String(menuCounts.all)} small={tr("tasks.filter.all", "All")} active={filter === "all"} onPress={() => setFilter("all")} />
-                <MenuPill big={String(menuCounts.active)} small={tr("tasks.filter.active", "Active")} active={filter === "active"} onPress={() => setFilter("active")} />
-                <MenuPill big={String(menuCounts.review)} small={tr("tasks.filter.review", tr("tasks.needsApproval", "Needs approval"))} active={filter === "review"} onPress={() => setFilter("review")} />
-                <MenuPill big={String(menuCounts.done)} small={tr("tasks.filter.done", "Done")} active={filter === "done"} onPress={() => setFilter("done")} />
+            </View>
+
+            {/* Separate stats card (All/Active/Needs approval/Done) */}
+            <View style={{ height: 12 }} />
+            <View style={styles.statsOuter}>
+              <View style={styles.statsClip}>
+              {LinearGradient ? (
+                <LinearGradient
+                  pointerEvents="none"
+                  colors={["rgba(255,255,255,0.96)", "rgba(240,247,255,0.95)"]}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={styles.heroGradientFill}
+                />
+              ) : (
+                <View pointerEvents="none" style={styles.heroGradientFillFallback} />
+              )}
+
+              <View style={styles.statsPanel}>
+                <View style={styles.statsGrid}>
+                  <MenuPill big={String(menuCounts.all)} small={tr("tasks.filter.all", "All")} active={filter === "all"} onPress={() => setFilter("all")} />
+                  <MenuPill big={String(menuCounts.active)} small={tr("tasks.filter.active", "Active")} active={filter === "active"} onPress={() => setFilter("active")} />
+                  <MenuPill big={String(menuCounts.done)} small={tr("tasks.filter.done", "Done")} active={filter === "done"} onPress={() => setFilter("done")} />
+                </View>
               </View>
 
               <View style={styles.heroAccentBg}>
                 <View style={styles.heroAccent} />
               </View>
             </View>
-          </View>
+            </View>
 
-          <View style={{ paddingHorizontal: 16 }}>
+            {/* + New button (between filters and list) */}
+            <View style={styles.newTaskWrapper}>
+              <Button
+                title={tr("tasks.newBtn", "+ New")}
+                onPress={openNew}
+                style={styles.newTaskBtn}
+                textStyle={styles.newTaskBtnText}
+              />
+            </View>
+
+          <View style={{ paddingHorizontal: 0 }}>
             {showEmpty ? (
               <EmptyState title={tr("tasks.emptyTitle", "No tasks")} subtitle={tr("tasks.emptySubtitle", "Create the first task with + New")} />
             ) : (
@@ -706,11 +747,12 @@ const myName = String(me?.name ?? tr("common.me", "Me"));
               />
             )}
           </View>
+          </View>
         </ScrollView>
 
         <BottomSheet visible={sheetOpen} onClose={() => setSheetOpen(false)}>
           <Card>
-            <Text style={{ fontSize:  16, fontWeight: "900", color: theme.colors.text }}>
+            <Text style={{ fontSize: 16, fontWeight: "900", color: PALETTE.text }}>
               {tr("tasks.actionsTitle", "Task actions")}
             </Text>
 
@@ -744,80 +786,76 @@ const myName = String(me?.name ?? tr("common.me", "Me"));
           }}
         >
           <Card>
-            <Text style={{ fontSize: 18, fontWeight: "900", color: theme.colors.text }}>
+            <Text style={{ fontSize: 18, fontWeight: "900", color: PALETTE.text }}>
               {selected ? tr("tasks.editTitle", "Edit task") : ""}
             </Text>
-            {!selected ? (
-              <Text style={{ marginTop: 2, fontSize: 13, fontWeight: "800", color: theme.colors.muted }}>
-                {tr("tasks.newPrompt", "What can you do today?")}
-              </Text>
-            ) : null}
-            <ScrollView style={{ maxHeight: 420 }} contentContainerStyle={{ paddingBottom: 12 }} keyboardShouldPersistTaps="handled">
+            <ScrollView style={{ maxHeight: 620 }} contentContainerStyle={{ paddingBottom: 36 }} keyboardShouldPersistTaps="always">
+              {!selected ? (
+                <Text style={{ marginTop: 2, fontSize: 13, fontWeight: "800", color: PALETTE.muted }}>
+                  {tr("tasks.new.title", "Create a new task for a family member")}
+                </Text>
+              ) : null}
 
-            <TextInput
-              value={draftTitle}
-              onChangeText={setDraftTitle}
-              placeholder={tr("tasks.titlePlaceholder", "e.g. Take Emma to practice.")}
-              placeholderTextColor={theme.colors.muted}
-              autoCapitalize="sentences"
-              style={[styles.input, { fontSize: 14, fontWeight: "800", paddingVertical: 10 }]}
-            />
-
-            <View style={{ marginTop: 12 }}>
-              <Text style={{ fontSize: 13, fontWeight: "800", color: theme.colors.muted }}>
-                {tr("tasks.when", "When?")}
-              </Text>
-            </View>
-
-            <View style={styles.dateButtonsRow}>
-              <Button
-                title={tr("tasks.today", "Today")}
-                variant={draftDateMode === "today" ? "primary" : "secondary"}
-                onPress={() => {
-                  setDraftDateMode("today");
-    const today0 = startOfDay(Date.now());
-    setDraftDateDDMM(ddmmFromTs(today0));
-    setDraftCalendarTs(today0);
-                }}
-                style={styles.dateBtn}
-                textStyle={styles.dateBtnText}
+              <TextInput
+                value={draftTitle}
+                onChangeText={setDraftTitle}
+                placeholder={tr("tasks.new.placeholder.title", "e.g. Take Luka to soccer practice")}
+                placeholderTextColor={theme.colors.muted}
+                autoCapitalize="sentences"
+                style={[styles.input, { fontSize: 14, fontWeight: "800", paddingVertical: 10 }]}
               />
-              <Button
-                title={tr("tasks.tomorrow", "Tomorrow")}
-                variant={draftDateMode === "tomorrow" ? "primary" : "secondary"}
-                onPress={() => {
-                  const base0 = startOfDay(Date.now());
-                  const tomo0 = addDays(base0, 1);
-                  setDraftDateMode("tomorrow");
-                  setDraftDateDDMM(ddmmFromTs(tomo0));
-                  setDraftCalendarTs(tomo0);
-                }}
-                style={styles.dateBtn}
-                textStyle={styles.dateBtnText}
-              />
-<Button
-                title={tr("tasks.calendar", "Calendar")}
-                variant={draftDateMode === "calendar" ? "primary" : "secondary"}
-                onPress={() => {
-                  // ✅ zatvori druge sheetove prije otvaranja kalendara
-                  setAssigneeOpen(false);
-                  const base = draftCalendarTs ?? startOfDay(Date.now());
-                  setDraftDateMode("calendar");
-                  setDraftCalendarTs(base);
-                  setCalendarTemp(new Date(base));
-                  setCalendarOpen(true);
-                }}
-                style={styles.dateBtn}
-                textStyle={styles.dateBtnText}
-              />
-            </View>
 
-            <TextInput
-                value={formatDisplayDateFromDDMM(draftDateDDMM, Date.now())}
+              <View style={{ marginTop: 12 }}>
+                <Text style={{ fontSize: 13, fontWeight: "800", color: PALETTE.muted }}>{tr("tasks.when", "When?")}</Text>
+              </View>
+
+              <View style={styles.dateButtonsRow}>
+                <Button
+                  title={tr("tasks.today", "Today")}
+                  variant={draftDateMode === "today" ? "primary" : "secondary"}
+                  onPress={() => {
+                    setDraftDateMode("today");
+                    const today0 = startOfDay(Date.now());
+                    setDraftDateDDMM(ddmmFromTs(today0));
+                    setDraftCalendarTs(today0);
+                  }}
+                  style={styles.dateBtn}
+                  textStyle={styles.dateBtnText}
+                />
+                <Button
+                  title={tr("tasks.tomorrow", "Tomorrow")}
+                  variant={draftDateMode === "tomorrow" ? "primary" : "secondary"}
+                  onPress={() => {
+                    const base0 = startOfDay(Date.now());
+                    const tomo0 = addDays(base0, 1);
+                    setDraftDateMode("tomorrow");
+                    setDraftDateDDMM(ddmmFromTs(tomo0));
+                    setDraftCalendarTs(tomo0);
+                  }}
+                  style={styles.dateBtn}
+                  textStyle={styles.dateBtnText}
+                />
+                <Button
+                  title={tr("tasks.calendar", "Calendar")}
+                  variant={draftDateMode === "calendar" ? "primary" : "secondary"}
+                  onPress={() => {
+                    setAssigneeOpen(false);
+                    const base = draftCalendarTs ?? startOfDay(Date.now());
+                    setDraftDateMode("calendar");
+                    setDraftCalendarTs(base);
+                    setCalendarTemp(new Date(base));
+                    setCalendarOpen(true);
+                  }}
+                  style={styles.dateBtn}
+                  textStyle={styles.dateBtnText}
+                />
+              </View>
+
+              <TextInput
+                value={formatDisplayDateFromDDMM(draftDateDDMM)}
                 onChangeText={(v) => {
                   const digits = String(v || "").replace(/[^0-9]/g, "").slice(0, 4);
                   setDraftDateDDMM(digits);
-                  // typing implies custom date
                   if (digits.length) {
                     setDraftDateMode("custom");
                     setDraftCalendarTs(null);
@@ -831,102 +869,185 @@ const myName = String(me?.name ?? tr("common.me", "Me"));
                 style={[styles.input, { fontSize: 14, fontWeight: "800", paddingVertical: 10, marginTop: 10 }]}
               />
 
-            <TextInput
-              value={formatTimeMasked(draftTimeDigits)}
-              onChangeText={(txt) => setDraftTimeDigits(digitsOnly(txt))}
-              placeholder={tr("tasks.timePlaceholder", "Type (HHMM) e.g. 16:30")}
-              placeholderTextColor={theme.colors.muted}
-              keyboardType="number-pad"
-              style={[styles.input, { fontSize: 14, fontWeight: "800", paddingVertical: 10 }]}
-            />
+              <TextInput
+                value={formatTimeMasked(draftTimeDigits)}
+                onChangeText={(txt) => setDraftTimeDigits(digitsOnly(txt))}
+                placeholder={tr("tasks.new.placeholder.time", "e.g. 16:30")}
+                placeholderTextColor={theme.colors.muted}
+                keyboardType="number-pad"
+                style={[styles.input, { fontSize: 14, fontWeight: "800", paddingVertical: 10 }]}
+              />
 
-            <Pressable
-              onPress={() => setRepeatOpen((x) => !x)}
-              style={{
-                marginTop: 12,
-                borderWidth: 1,
-                borderColor: theme.colors.border,
-                backgroundColor: theme.colors.card,
-                borderRadius: 14,
-                paddingHorizontal: 14,
-                paddingVertical: 12,
-                flexDirection: "row",
-                alignItems: "center",
-                justifyContent: "space-between",
-              }}
-            >
-              <Text style={{ fontSize: 13, fontWeight: "800", color: theme.colors.muted }}>
-                {tr("tasks.repeat.label", "Repeat")}
-              </Text>
-
-              <View style={{ flexDirection: "row", alignItems: "center", gap: 10, flex: 1, justifyContent: "flex-end" }}>
-                <Text style={{ fontSize: 15, fontWeight: "900", color: theme.colors.text }} numberOfLines={1}>
-                  {draftRepeatDays ? `${draftRepeatDays} ${tr("tasks.repeat.days", "days")}${draftAutoComplete ? ` • ${tr("tasks.repeat.auto", "Auto")}` : ""}` : tr("tasks.repeat.none", "Off")}
-                </Text>
-                <Ionicons name={repeatOpen ? "chevron-down" : "chevron-forward"} size={18} color={theme.colors.muted} />
-              </View>
-            </Pressable>
-
-            {repeatOpen ? (
+              {/* Reminder (minutes before due time) */}
               <View style={{ marginTop: 10 }}>
-                <TextInput
-                  value={draftRepeatDays}
-                  onChangeText={(v) => setDraftRepeatDays(String(v || "").replace(/[^0-9]/g, "").slice(0, 3))}
-                  placeholder={tr("tasks.repeatEveryPlaceholder", "Repeat every ___ days (numbers only)")}
-                  placeholderTextColor={theme.colors.muted}
-                  keyboardType="number-pad"
-                  style={[styles.input, { marginTop: 10, fontSize: 14, fontWeight: "900", paddingVertical: 10 }]}
-                />
+                <Text style={{ fontSize: 12, fontWeight: "800", color: PALETTE.muted }}>{tr("tasks.reminder.label", "Reminder")}</Text>
 
-                {isParent && draftRepeatDays ? (
-                  <View style={{ marginTop: 10 }}>
+                <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8, marginTop: 8 }}>
+                  <Button
+                    title={tr("common.off", "OFF")}
+                    variant={draftReminderOffset === null ? "primary" : "secondary"}
+                    onPress={() => setDraftReminderOffset(null)}
+                    style={{ height: 30, paddingHorizontal: 12, borderRadius: 10 }}
+                    textStyle={{ fontSize: 12, fontWeight: "800" }}
+                  />
+
+                  {[15, 30, 60].map((m) => (
                     <Button
-                      title={
-                        draftAutoComplete
-                          ? tr("tasks.repeat.autoOn", "Auto (no approval): ON")
-                          : tr("tasks.repeat.autoOff", "Auto (no approval): OFF")
-                      }
-                      variant={draftAutoComplete ? "primary" : "secondary"}
-                      onPress={() => setDraftAutoComplete((x) => !x)}
-                      style={{ height: 38, borderRadius: 12 }}
+                      key={m}
+                      title={`${m}m`}
+                      variant={draftReminderOffset === (m as any) ? "primary" : "secondary"}
+                      onPress={() => setDraftReminderOffset(m as any)}
+                      style={{ height: 30, paddingHorizontal: 12, borderRadius: 10 }}
                       textStyle={{ fontSize: 12, fontWeight: "800" }}
                     />
-                    <Text style={{ marginTop: 6, color: theme.colors.muted, fontWeight: "700", fontSize: 12 }}>
-                      {tr(
-                        "tasks.repeat.autoHint",
-                        "Auto: one tap 'Done' will move the next due date automatically (great for trash pickup)."
-                      )}
-                    </Text>
-                  </View>
+                  ))}
+                </View>
+
+                {!digitsOnly(draftTimeDigits) && draftReminderOffset ? (
+                  <Text style={{ marginTop: 6, fontSize: 12, fontWeight: "800", color: PALETTE.muted }}>
+                    {tr("tasks.reminder.requiresTime", "Set a time to enable reminders.")}
+                  </Text>
                 ) : null}
               </View>
-            ) : null}
 
+              {/* Repeat (interval days) */}
+              <View style={{ marginTop: 12 }}>
+                <View
+                  style={{
+                    borderWidth: 1,
+                    borderColor: theme.colors.border,
+                    backgroundColor: theme.colors.card,
+                    borderRadius: 14,
+                    paddingHorizontal: 14,
+                    paddingVertical: 12,
+                  }}
+                >
+                  <View style={{ flexDirection: "row", alignItems: "center" }}>
+                    <Text style={{ fontSize: 13, fontWeight: "800", color: PALETTE.muted }}>{tr("tasks.new.repeatEveryDays", "Repeat every")}</Text>
 
-            {isParent ? (
+                    <TextInput
+                      value={repeatEnabled ? draftRepeatDays : ""}
+                      onChangeText={(v) => {
+                        const digits = String(v || "").replace(/[^0-9]/g, "").slice(0, 3);
+                        setDraftRepeatDays(digits);
+                        setRepeatEnabled(!!digits);
+                      }}
+                      placeholder={tr("tasks.repeatDaysPlaceholder", "___")}
+                      placeholderTextColor={theme.colors.muted}
+                      keyboardType="number-pad"
+                      maxLength={3}
+                      style={{
+                        marginLeft: 10,
+                        marginRight: 10,
+                        width: 54,
+                        textAlign: "center",
+                        paddingVertical: 6,
+                        borderWidth: 1,
+                        borderColor: theme.colors.border,
+                        borderRadius: 10,
+                        fontSize: 14,
+                        fontWeight: "900",
+                        color: PALETTE.text,
+                        backgroundColor: theme.colors.background,
+                      }}
+                    />
+
+                    <Text style={{ fontSize: 13, fontWeight: "800", color: PALETTE.muted, marginRight: 10 }}>{tr("tasks.repeat.days", "days")}</Text>
+
+                    <View style={{ flex: 1 }} />
+
+                    <Text style={{ fontSize: 13, fontWeight: "800", color: PALETTE.muted, marginRight: 8 }}>
+                      {repeatEnabled ? tr("common.on", "On") : tr("common.off", "Off")}
+                    </Text>
+                    <Switch
+                      value={repeatEnabled}
+                      onValueChange={(v) => {
+                        setRepeatEnabled(!!v);
+                        if (!v) {
+                          setDraftRepeatDays("");
+                        } else {
+                          if (!draftRepeatDays) setDraftRepeatDays("7");
+                        }
+                      }}
+                    />
+                  </View>
+                </View>
+              </View>
+
+              {/* Assignee picker overlay modal */}
+              {assigneeOpen ? (
+                <Modal visible transparent animationType="fade" onRequestClose={() => setAssigneeOpen(false)}>
+                  <Pressable style={styles.dropdownBackdrop} onPress={() => setAssigneeOpen(false)} />
+                  <View style={[styles.dropdownPanel, { bottom: Math.max(16, kbH + 16) }]}>
+                    <View style={styles.assigneePickerHeader}>
+                      <Text style={styles.assigneePickerTitle}>{tr("tasks.new.assignTo", "Who should do this?")}</Text>
+                      <Pressable onPress={() => setAssigneeOpen(false)} hitSlop={12} style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1, padding: 4 })}>
+                        <Ionicons name="close" size={18} color={theme.colors.muted} />
+                      </Pressable>
+                    </View>
+
+                    <ScrollView style={{ maxHeight: 320 }} contentContainerStyle={{ gap: 10, paddingBottom: 6 }} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator>
+                      <Button
+                        title={tr("tasks.assign.clear", "Clear selection")}
+                        variant="secondary"
+                        onPress={() => {
+                          setDraftAssigneeId(null);
+                          setDraftAssigneeName(null);
+                          setAssigneeOpen(false);
+                        }}
+                      />
+
+                      {(Array.isArray(members) ? members : [])
+                        .filter((m: any) => String(m?.id ?? "") !== "")
+                        .map((m: any) => (
+                          <Button
+                            key={String(m.id)}
+                            title={String(m.name ?? "")}
+                            variant={String(draftAssigneeId) === String(m.id) ? "primary" : "secondary"}
+                            onPress={() => {
+                              setDraftAssigneeId(String(m.id));
+                              setDraftAssigneeName(String(m.name ?? ""));
+                              setAssigneeOpen(false);
+                            }}
+                          />
+                        ))}
+                    </ScrollView>
+                  </View>
+                </Modal>
+              ) : null}
+
               <Pressable
                 onPress={() => {
-                  // ✅ zatvori kalendar prije otvaranja assignee-a
+                  Keyboard.dismiss();
                   setCalendarOpen(false);
-                  setAssigneeOpen(true);
+                  setAssigneeOpen((v) => !v);
                 }}
                 style={styles.assigneeRow}
               >
                 <Text style={styles.assigneeLabel} numberOfLines={1}>
-                  {tr("tasks.assignTo", "Assign to")}
+                  {tr("tasks.new.assignTo", "Who should do this?")}
                 </Text>
 
                 <View style={styles.assigneeRight}>
                   <Text style={styles.assigneeValue} numberOfLines={1} ellipsizeMode="tail">
-                    {draftAssigneeName ? String(draftAssigneeName) : tr("tasks.assign.none", "Not assigned")}
+                    {draftAssigneeName ? String(draftAssigneeName) : tr("tasks.assign.selectCta", "Select")}
                   </Text>
                   <Ionicons name="chevron-forward" size={18} color={theme.colors.muted} />
                 </View>
               </Pressable>
-            ) : null}</ScrollView>
+            </ScrollView>
 
-
-            <View style={{ flexDirection: "row", gap: 10, marginTop: 12, justifyContent: "flex-end" }}>
+            <View
+              style={{
+                flexDirection: "row",
+                gap: 10,
+                marginTop: -45,
+                justifyContent: "flex-end",
+                paddingTop: Platform.OS === "android" ? 60 : 10,
+                paddingHorizontal: 14,
+                paddingBottom: Platform.OS === "android" ? 10 : 10,
+              }}
+            >
               <Button
                 title={tr("common.cancel", "Cancel")}
                 variant="secondary"
@@ -948,48 +1069,9 @@ const myName = String(me?.name ?? tr("common.me", "Me"));
           </Card>
         </BottomSheet>
 
-        <BottomSheet visible={assigneeOpen} onClose={() => setAssigneeOpen(false)}>
-          <Card>
-            <Text style={{ fontSize: 18, fontWeight: "900", color: theme.colors.text }}>
-              {tr("tasks.assignTo", "Assign to")}
-            </Text>
-
-            <View style={{ marginTop: 12, gap: 10 }}>
-              <Button
-                title={tr("tasks.assign.none", "Not assigned")}
-                variant="secondary"
-                onPress={() => {
-                  setDraftAssigneeId(null);
-                  setDraftAssigneeName(null);
-                  setAssigneeOpen(false);
-                }}
-              />
-
-              {(Array.isArray(members) ? members : [])
-                .filter((m: any) => String(m?.id ?? "") !== "")
-                .map((m: any) => (
-                  <Button
-                    key={String(m.id)}
-                    title={String(m.name ?? "")}
-                    variant={String(draftAssigneeId) === String(m.id) ? "primary" : "secondary"}
-                    onPress={() => {
-                      setDraftAssigneeId(String(m.id));
-                      setDraftAssigneeName(String(m.name ?? ""));
-                      setAssigneeOpen(false);
-                    }}
-                  />
-                ))}
-
-              <Button title={tr("common.cancel", "Cancel")} variant="secondary" onPress={() => setAssigneeOpen(false)} />
-            </View>
-          </Card>
-        </BottomSheet>
-
         <BottomSheet visible={calendarOpen} onClose={() => setCalendarOpen(false)}>
           <Card>
-            <Text style={{ fontSize: 18, fontWeight: "900", color: theme.colors.text }}>
-              {tr("tasks.calendar", "Calendar")}
-            </Text>
+            <Text style={{ fontSize: 18, fontWeight: "900", color: PALETTE.text }}>{tr("tasks.calendar", "Calendar")}</Text>
 
             <View style={{ marginTop: 12 }}>
               {DateTimePicker ? (
@@ -1008,12 +1090,7 @@ const myName = String(me?.name ?? tr("common.me", "Me"));
                       </View>
 
                       <View style={{ flexDirection: "row", gap: 10 }}>
-                        <Button
-                          title={tr("common.cancel", "Cancel")}
-                          variant="secondary"
-                          onPress={() => setCalendarOpen(false)}
-                          style={{ flex: 1 }}
-                        />
+                        <Button title={tr("common.cancel", "Cancel")} variant="secondary" onPress={() => setCalendarOpen(false)} style={{ flex: 1 }} />
                         <Button
                           title={tr("common.save", "Save")}
                           onPress={() => {
@@ -1049,12 +1126,12 @@ const myName = String(me?.name ?? tr("common.me", "Me"));
                 </>
               ) : (
                 <>
-                  <Text style={{ color: theme.colors.muted, fontWeight: "700" }}>
+                  <Text style={{ color: PALETTE.muted, fontWeight: "700" }}>
                     {tr("tasks.calendarMissing", "Calendar picker not installed. Enter DDMM; calendar is optional.")}
                   </Text>
 
                   <TextInput
-                    value={formatDisplayDateFromDDMM(draftDateDDMM, Date.now())}
+                    value={formatDisplayDateFromDDMM(draftDateDDMM)}
                     onChangeText={(v) => {
                       const digits = String(v || "").replace(/[^0-9]/g, "").slice(0, 4);
                       setDraftDateDDMM(digits);
@@ -1089,24 +1166,81 @@ const myName = String(me?.name ?? tr("common.me", "Me"));
   );
 }
 
+const FONT = {
+  title: (theme as any)?.fonts?.title ?? (Platform.OS === "ios" ? "AvenirNext-Heavy" : "sans-serif"),
+  body: (theme as any)?.fonts?.body ?? (Platform.OS === "ios" ? "AvenirNext-Regular" : "sans-serif"),
+};
+
+const PALETTE = {
+  text: "#0B1220",
+  muted: "#667085",
+  primary: "#2F6BFF",
+  card: "rgba(255,255,255,0.94)",
+  cardSoft: "rgba(242,248,255,0.92)",
+  border: "rgba(140,160,190,0.18)",
+  borderBlue: "rgba(47,107,255,0.30)",
+};
+
+const FROST = {
+  bg: PALETTE.card,
+  bgStrong: "rgba(255,255,255,0.96)",
+  border: "rgba(255,255,255,0.95)",
+  borderSoft: PALETTE.border,
+  shadow:
+    Platform.OS === "android"
+      ? { elevation: 5 }
+      : {
+          shadowColor: "#000",
+          shadowOpacity: 0.08,
+          shadowRadius: 18,
+          shadowOffset: { width: 0, height: 8 },
+        },
+};
+
 const styles: any = {
+  // Promo-like frosted cards
   heroCard: {
     borderWidth: 1,
-    borderColor: "#e5e7eb",
-    backgroundColor: "#fff",
-    borderRadius: 22,
-    padding: 14,
+    borderColor: FROST.borderSoft,
+    backgroundColor: FROST.bg,
+    borderRadius: 26,
+    padding: 16,
     overflow: "hidden",
-    ...Platform.select({
-      android: { elevation: 1 },
-      ios: {
-        shadowColor: "#000",
-        shadowOpacity: 0.06,
-        shadowRadius: 14,
-        shadowOffset: { width: 0, height: 5 },
-      },
-      default: {},
-    }),
+    ...FROST.shadow,
+  },
+
+  // Split: header card and stats card
+  headerOuter: {
+    width: "100%",
+    alignSelf: "stretch",
+    borderWidth: 1,
+    borderColor: FROST.borderSoft,
+    backgroundColor: FROST.bgStrong,
+    borderRadius: 26,
+    overflow: "visible",
+    ...FROST.shadow,
+  },
+  headerClip: {
+    borderRadius: 26,
+    overflow: "hidden",
+    backgroundColor: FROST.bgStrong,
+    padding: 16,
+  },
+  statsOuter: {
+    width: "100%",
+    alignSelf: "stretch",
+    borderWidth: 1,
+    borderColor: FROST.borderSoft,
+    backgroundColor: FROST.bg,
+    borderRadius: 26,
+    overflow: "visible",
+    ...FROST.shadow,
+  },
+  statsClip: {
+    borderRadius: 26,
+    overflow: "hidden",
+    backgroundColor: FROST.bg,
+    padding: 14,
   },
   heroTopRow: {
     flexDirection: "row",
@@ -1114,63 +1248,89 @@ const styles: any = {
     justifyContent: "space-between",
     gap: 12,
   },
-  heroTitle: {
-    fontSize: 24,
-    fontWeight: "900",
-    color: theme.colors.text,
-    letterSpacing: 0.2,
-  },
-  heroSub: {
-    marginTop: 5,
-    fontSize: 13,
-    fontWeight: "700",
-    color: theme.colors.muted,
+  heroLeft: { flex: 1, minWidth: 0, paddingRight: 150 },
+  heroArt: {
+    position: "absolute",
+    right: 16,
+    top: -20,
+    width: 110,
+    height: 110,
+    pointerEvents: "none",
   },
 
-  menuRow: {
-    marginTop: 6,
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 10,
+  newTaskWrapper: {
+    marginTop: 10,
+    paddingHorizontal: 2,
+    marginBottom: 10,
   },
-  menuPill: {
-    flexGrow: 1,
-    flexBasis: "48%",
-    borderWidth: 1,
-    borderColor: "#e5e7eb",
-    backgroundColor: "#f8fafc",
+  newTaskBtn: {
+    height: 44,
     borderRadius: 18,
-    paddingVertical: 10,
-    paddingHorizontal: 10,
-    alignItems: "center",
-    justifyContent: "center",
-    ...Platform.select({
-      android: { elevation: 1 },
-      ios: {
-        shadowColor: "#000",
-        shadowOpacity: 0.03,
-        shadowRadius: 10,
-        shadowOffset: { width: 0, height: 4 },
-      },
-      default: {},
-    }),
+    paddingHorizontal: 16,
+    alignSelf: "flex-end",
   },
+  newTaskBtnText: {
+    fontSize: 15,
+    fontWeight: "900",
+  },
+
+  heroTitle: {
+    fontSize: 24,
+    fontWeight: "800",
+    fontFamily: FONT.title,
+    color: PALETTE.text,
+    letterSpacing: -0.7,
+  },
+  heroSub: {
+    marginTop: 6,
+    fontSize: 15,
+    fontWeight: "800",
+    fontFamily: FONT.body,
+    color: "#556377",
+  },
+
+  statsPanel: {
+    padding: 10,
+  },
+
+statsGrid: {
+  flexDirection: "row",
+  flexWrap: "nowrap",        // ⬅️ VAŽNO: jedan red
+  justifyContent: "space-between",
+  gap: 8,
+},
+
+menuPill: {
+  flex: 1,                   // ⬅️ sve tri dijele širinu
+  maxWidth: "32%",           // ⬅️ 3 u jedan red
+  borderWidth: 1,
+  borderColor: FROST.borderSoft,
+  backgroundColor: "#ffffff",
+  borderRadius: 16,
+  paddingVertical: 8,        // ⬅️ malo niže
+  paddingHorizontal: 6,
+  alignItems: "center",
+  justifyContent: "center",
+},
+
   menuPillActive: {
-    backgroundColor: "#eff6ff",
-    borderColor: "#bfdbfe",
+    backgroundColor: "rgba(47,107,255,0.10)",
+    borderColor: PALETTE.borderBlue,
   },
   menuBig: {
     fontSize: 18,
-    fontWeight: "900",
+    fontWeight: "800",
+    fontFamily: FONT.title,
     textAlign: "center",
-    color: theme.colors.text,
+    color: PALETTE.text,
   },
   menuSmall: {
     marginTop: 2,
     fontSize: 12,
-    fontWeight: "800",
+    fontWeight: "700",
+    fontFamily: FONT.body,
     textAlign: "center",
-    color: theme.colors.muted,
+    color: PALETTE.muted,
   },
 
   heroAccentBg: {
@@ -1179,40 +1339,43 @@ const styles: any = {
     right: 0,
     bottom: 0,
     height: 6,
-    backgroundColor: "#f1f5f9",
+    backgroundColor: "rgba(210,225,255,0.55)",
   },
   heroAccent: {
     height: 6,
     width: "52%",
     borderTopRightRadius: 999,
     borderBottomRightRadius: 999,
-    backgroundColor: (theme as any)?.colors?.primary ?? "#2563eb",
+    backgroundColor: PALETTE.primary,
   },
 
   taskCard: {
-    marginBottom: 10,
-    padding: 12,
+    marginBottom: 12,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: FROST.borderSoft,
+    backgroundColor: FROST.bg,
+    borderRadius: 22,
+    ...FROST.shadow,
   },
   taskRow: {
     flexDirection: "row",
     alignItems: "stretch",
   },
   statusBar: {
-    width: 4,
-    // Pull to the very left edge of the card (taskCard has padding: 12)
-    marginLeft: -12,
-    marginRight: 12,
-    // Not full height: leave top/bottom breathing room
-    marginTop: 10,
-    marginBottom: 10,
-    borderTopRightRadius: 2,
-    borderBottomRightRadius: 2,
+    width: 5,
+    marginLeft: -14,
+    marginRight: 14,
+    marginTop: 12,
+    marginBottom: 12,
+    borderTopRightRadius: 4,
+    borderBottomRightRadius: 4,
     opacity: 0.95,
   },
   taskContent: {
     flex: 1,
   },
-  
+
   taskHeader: {
     flexDirection: "row",
     alignItems: "flex-start",
@@ -1220,45 +1383,89 @@ const styles: any = {
     gap: 12,
   },
   taskTitle: {
-    fontWeight: "900",
-    fontSize: 16,
-    color: theme.colors.text,
+    fontWeight: "800",
+    fontSize: 17,
+    fontFamily: FONT.title,
+    color: PALETTE.text,
   },
   taskMeta: {
-    color: theme.colors.muted,
-    fontWeight: "800",
+    color: PALETTE.muted,
+    fontWeight: "700",
     fontSize: 12,
+    fontFamily: FONT.body,
   },
 
-  statusBadge: {
+  statusPill: {
     alignSelf: "flex-start",
-    paddingHorizontal: 10,
-    height: 26,
-    borderRadius: 13,
     borderWidth: 1,
-    borderColor: theme.colors.border,
-    backgroundColor: theme.colors.surface,
-    alignItems: "center",
-    justifyContent: "center",
+    borderColor: PALETTE.border,
+    backgroundColor: "rgba(47,107,255,0.10)",
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
   },
-  statusBadgeText: {
-    fontWeight: "900",
+  statusPillText: {
     fontSize: 12,
-    color: theme.colors.muted,
+    fontWeight: "900",
+    color: PALETTE.primary,
+    fontFamily: FONT.body,
+  },
+
+  // Timeline (replaces the status badge)
+  tlWrap: {
+    alignSelf: "flex-start",
+    alignItems: "flex-end",
+    minWidth: 120,
+  },
+  tlRow: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  tlDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 999,
+    borderWidth: 2,
+  },
+  tlDotDone: {
+    backgroundColor: PALETTE.primary,
+    borderColor: PALETTE.primary,
+  },
+  tlDotActive: {
+    backgroundColor: "transparent",
+    borderColor: PALETTE.primary,
+  },
+  tlDotPending: {
+    backgroundColor: "transparent",
+    borderColor: PALETTE.border,
+  },
+  tlLine: {
+    height: 2,
+    width: 18,
+    marginHorizontal: 4,
+    borderRadius: 999,
+  },
+  tlLineDone: {
+    backgroundColor: PALETTE.primary,
+    opacity: 0.9,
+  },
+  tlLinePending: {
+    backgroundColor: PALETTE.border,
+    opacity: 0.9,
   },
 
   actionsRow: {
-    marginTop: 10,
+    marginTop: 12,
     flexDirection: "row",
     flexWrap: "wrap",
-    gap: 6,
+    gap: 8,
     alignItems: "flex-start",
   },
   actionBtn: {
-    height: 32,
-    borderRadius: 12,
+    height: 34,
+    borderRadius: 14,
     paddingHorizontal: 12,
-    minWidth: 82,
+    minWidth: 86,
     alignSelf: "flex-start",
   },
 
@@ -1276,26 +1483,47 @@ const styles: any = {
     paddingHorizontal: 0,
   },
   dateBtnText: {
-    fontSize: 12,
-    fontWeight: "800",
+    fontSize: 13,
+    fontWeight: "700",
+    fontFamily: FONT.body,
   },
 
   assigneeRow: {
     marginTop: 10,
     borderWidth: 1,
-    borderColor: theme.colors.border,
-    backgroundColor: theme.colors.card,
-    borderRadius: 14,
+    borderColor: FROST.borderSoft,
+    backgroundColor: FROST.bg,
+    borderRadius: 16,
     paddingHorizontal: 14,
     paddingVertical: 12,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
   },
+  assigneePicker: {
+    marginTop: 8,
+    borderWidth: 1,
+    borderColor: FROST.borderSoft,
+    backgroundColor: FROST.bg,
+    borderRadius: 16,
+    padding: 12,
+  },
+  assigneePickerHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 10,
+  },
+  assigneePickerTitle: {
+    fontSize: 14,
+    fontWeight: "900",
+    color: PALETTE.text,
+  },
   assigneeLabel: {
-    fontSize: 13,
-    fontWeight: "800",
-    color: theme.colors.muted,
+    fontSize: 14,
+    fontWeight: "700",
+    fontFamily: FONT.body,
+    color: PALETTE.muted,
     marginRight: 10,
   },
   assigneeRight: {
@@ -1307,7 +1535,7 @@ const styles: any = {
   assigneeValue: {
     fontSize: 15,
     fontWeight: "900",
-    color: theme.colors.text,
+    color: PALETTE.text,
     maxWidth: "85%",
   },
   assigneeChevron: {
@@ -1315,18 +1543,45 @@ const styles: any = {
     fontSize: 22,
     lineHeight: 22,
     fontWeight: "900",
-    color: theme.colors.muted,
+    color: PALETTE.muted,
   },
 
   sheetBackdrop: {
-    flex: 1,
-    backgroundColor: "rgba(0,0,0,0.35)",
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(15,23,42,0.35)",
   },
-  sheetWrap: {
+
+  modalRoot: {
+    flex: 1,
+    justifyContent: "flex-end",
+  },
+
+  dropdownBackdrop: {
     position: "absolute",
+    top: 0,
     left: 0,
     right: 0,
     bottom: 0,
+    backgroundColor: "rgba(15,23,42,0.18)",
+  },
+  dropdownPanel: {
+    position: "absolute",
+    left: 14,
+    right: 14,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: FROST.borderSoft,
+    backgroundColor: FROST.bg,
+    padding: 14,
+    shadowColor: "#000",
+    shadowOpacity: 0.16,
+    shadowRadius: 20,
+    shadowOffset: { width: 0, height: 10 },
+    elevation: 22,
+  },
+  sheetWrap: {
+    flex: 1,
+    justifyContent: "flex-end",
     padding: 14,
   },
   sheetInner: {
@@ -1336,10 +1591,10 @@ const styles: any = {
   input: {
     marginTop: 12,
     borderWidth: 1,
-    borderColor: theme.colors.border,
-    borderRadius: theme.radius.input,
+    borderColor: FROST.borderSoft,
+    borderRadius: 16,
     padding: 12,
-    backgroundColor: "#fff",
-    color: theme.colors.text,
+    backgroundColor: FROST.bgStrong,
+    color: PALETTE.text,
   },
 };

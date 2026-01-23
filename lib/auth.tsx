@@ -3,7 +3,20 @@ import React, { createContext, useContext, useEffect, useMemo, useState } from "
 import { Alert } from "react-native";
 import * as Linking from "expo-linking";
 import { supabase } from "./supabase";
-import { tr } from "./locale";
+
+// NOTE: Keep auth self-contained. Some screens may render before locale/i18n hooks are ready.
+// Use safe fallbacks here to avoid runtime crashes.
+function trSafe(key: string, params?: Record<string, any>) {
+  // Minimal set we use in this file.
+  if (key === "common.error") return "Error";
+  if (key === "auth.invalidEmail") return "Invalid email.";
+  if (key === "auth.magicLinkSentTitle") return "Check your email";
+  if (key === "auth.magicLinkSentBody") {
+    const email = String(params?.email ?? "");
+    return email ? `We sent a sign-in link to ${email}.` : "We sent a sign-in link.";
+  }
+  return "";
+}
 
 type AuthContextValue = {
   ready: boolean;
@@ -58,7 +71,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   async function sendMagicLink(emailInput: string): Promise<boolean> {
     const e = cleanEmail(emailInput);
     if (!e || !e.includes("@")) {
-      Alert.alert(tr("common.error"), tr("auth.invalidEmail"));
+      Alert.alert(trSafe("common.error"), trSafe("auth.invalidEmail"));
       return false;
     }
 
@@ -76,14 +89,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       });
 
       if (error) {
-        Alert.alert(tr("common.error"), error.message);
+        Alert.alert(trSafe("common.error"), error.message);
         return false;
       }
 
-      Alert.alert(tr("auth.magicLinkSentTitle"), tr("auth.magicLinkSentBody", { email: e }));
+      Alert.alert(trSafe("auth.magicLinkSentTitle"), trSafe("auth.magicLinkSentBody", { email: e }));
       return true;
     } catch (err: any) {
-      Alert.alert(tr("common.error"), String(err?.message ?? err));
+      Alert.alert(trSafe("common.error"), String(err?.message ?? err));
       return false;
     }
   }

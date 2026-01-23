@@ -4,11 +4,13 @@ import {
   Alert,
   Animated,
   FlatList,
+  Modal,
   Platform,
   Pressable,
   RefreshControl,
   Text,
   View,
+  Image,
 } from "react-native";
 
 import { Screen } from "../../src/ui/components/Screen";
@@ -46,6 +48,13 @@ function toHHMM(ts: number) {
   const d = new Date(ts);
   return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 }
+
+function formatDueInline(ts: number) {
+  const d = new Date(ts);
+  const date = d.toLocaleDateString(undefined, { day: "2-digit", month: "2-digit" });
+  const time = d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  return `${date} ${time}`;
+}
 function formatLongDate(d: Date, locale?: string) {
   try {
     return d.toLocaleDateString(locale || undefined, {
@@ -69,14 +78,6 @@ function getStatus(t: Task): TaskStatus {
   return (((t as any)?.status as TaskStatus) || "open") as TaskStatus;
 }
 
-function getStatusLabel(tr: (k: string, fb: string, p?: any) => string, s: string) {
-  if (s === "open") return tr("tasks.status.open", "Open");
-  if (s === "claimed") return tr("tasks.status.claimed", "Claimed");
-  if (s === "review") return tr("tasks.status.review", "Needs approval");
-  if (s === "done") return tr("tasks.status.done", "Done");
-  return s;
-}
-
 
 function getStatusBarStyle(status: string, isLate: boolean) {
   if (isLate && status !== "done") return { backgroundColor: theme.colors.danger };
@@ -86,13 +87,86 @@ function getStatusBarStyle(status: string, isLate: boolean) {
   return { backgroundColor: theme.colors.primary };
 }
 
-function StatusBadge({ label }: { label: string }) {
+
+function TaskTimeline({
+  status,
+  hintText,
+}: {
+  status: string;
+  hintText: string;
+}) {
+  const s = String(status ?? "open");
+
+  // 3-step timeline: Created/Assigned -> Done -> Approved
+  const step1Done = true;
+  const step2Done = s === "review" || s === "done";
+  const step2Active = !step2Done && (s === "open" || s === "claimed");
+  const step3Done = s === "done";
+  const step3Active = !step3Done && s === "review";
+
+  function dotStyle(done: boolean, active: boolean) {
+    if (done) return [styles.tlDot, styles.tlDotDone];
+    if (active) return [styles.tlDot, styles.tlDotActive];
+    return [styles.tlDot, styles.tlDotPending];
+  }
+  function lineStyle(done: boolean) {
+    return [styles.tlLine, done ? styles.tlLineDone : styles.tlLinePending];
+  }
+
+  const line12Done = step2Done;
+  const line23Done = step3Done;
+
   return (
-    <View style={styles.statusBadge}>
-      <Text style={styles.statusBadgeText} numberOfLines={1}>
-        {label}
-      </Text>
+    <View style={styles.tlWrap} accessibilityLabel="Task progress">
+      <View style={styles.tlRow}>
+        <View style={dotStyle(step1Done, false)} />
+        <View style={lineStyle(line12Done)} />
+        <View style={dotStyle(step2Done, step2Active)} />
+        <View style={lineStyle(line23Done)} />
+        <View style={dotStyle(step3Done, step3Active)} />
+      </View>
+
     </View>
+  );
+}
+
+
+function InfoButton({ onPress }: { onPress: () => void }) {
+  return (
+    <Pressable
+      onPress={onPress}
+      hitSlop={10}
+      style={({ pressed }) => [styles.infoBtn, pressed ? { opacity: 0.75, transform: [{ scale: 0.98 }] } : null]}
+    >
+      <Text style={styles.infoBtnText}>i</Text>
+    </Pressable>
+  );
+}
+
+function InfoSheet({
+  visible,
+  title,
+  body,
+  okLabel,
+  onClose,
+}: {
+  visible: boolean;
+  title: string;
+  body: string;
+  okLabel: string;
+  onClose: () => void;
+}) {
+  return (
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+      <Pressable style={styles.infoBackdrop} onPress={onClose}>
+        <Pressable style={styles.infoCard} onPress={() => {}}>
+          <Text style={styles.infoTitle}>{title}</Text>
+          <Text style={styles.infoBody}>{body}</Text>
+          <View style={{ height: 12 }} />
+          <Button title={okLabel} onPress={onClose} style={styles.infoOkBtn} textStyle={styles.infoOkText} />
+        </Pressable>
+      </Pressable>
+    </Modal>
   );
 }
 
@@ -177,17 +251,36 @@ export default function HomeScreen() {
   const [busyId, setBusyId] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
 
+  // Small, on-demand help overlays (opened via "i" buttons)
+  const [infoVisible, setInfoVisible] = useState(false);
+  const [infoTitle, setInfoTitle] = useState("");
+  const [infoBody, setInfoBody] = useState("");
+
+  function openInfo(title: string, body: string) {
+    setInfoTitle(title);
+    setInfoBody(body);
+    setInfoVisible(true);
+  }
+
   const today0 = useMemo(() => startOfDay(now.getTime()), [now]);
   const todayEnd = useMemo(() => endOfDay(now.getTime()), [now]);
   const upcomingEnd = useMemo(() => endOfDay(addDays(today0, 7)), [today0]);
 
   const subtitle = useMemo(() => formatLongDate(now, locale), [now, locale]);
 
-  const [scope3, setScope3] = useState<"family" | "me" | "kids">(isParent ? "family" : "me");
+  // Default scope for everyone (parents + kids) is "me".
+  // Users can switch to Family / Kids, but Home always starts focused on their own tasks.
+  const [scope3, setScope3] = useState<"family" | "me" | "kids">("me");
   useEffect(() => {
-    setScope3(isParent ? "family" : "me");
+    setScope3("me");
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isParent, myId]);
+  }, [myId]);
+
+  const scopeHint = useMemo(() => {
+    if (scope3 === "me") return tr("home.scopeHint.me", "Tasks that are for you");
+    if (scope3 === "kids") return tr("home.scopeHint.kids", "Tasks for all kids");
+    return tr("home.scopeHint.family", "All family tasks");
+  }, [scope3, t, myId]);
 
   const [homeFilter, setHomeFilter] = useState<HomeFilter>("all");
 
@@ -213,8 +306,7 @@ export default function HomeScreen() {
         const cId = (x as any)?.claimedById ?? null;
         const rId = (x as any)?.requestedDoneById ?? null;
         return (
-          !aId ||
-          String(aId) === String(myId) ||
+          (aId && String(aId) === String(myId)) ||
           (cId && String(cId) === String(myId)) ||
           (rId && String(rId) === String(myId))
         );
@@ -436,55 +528,51 @@ export default function HomeScreen() {
       return (
         <View style={{ marginBottom: 12 }}>
           <View style={styles.heroCard}>
-            {/* Header row */}
-            <View style={styles.headerRow}>
-              <View style={{ flex: 1, paddingRight: 120 }}>
-                <Text style={styles.brandTitle}>FAMIGO</Text>
-                <Text style={styles.brandTagline} numberOfLines={1}>
-                  {tr("home.tagline", "Family tasks made simple")}
-                </Text>
-              </View>
-
-              {/* Clock + date aligned to top-right, same top as FAMIGO */}
-              <View style={styles.headerRight}>
-                <View style={styles.clockPill}>
-                  <Text style={styles.clockText}>{toHHMM(now.getTime())}</Text>
-                </View>
-                <Text style={styles.dateTopRight} numberOfLines={1}>
-                  {subtitle}
-                </Text>
+            {/* Hero logo (overlaps the card) */}
+            <View style={styles.heroHeader}>
+              <View style={styles.heroLogoWrap}>
+                <Image
+                  source={require("../../assets/avatars/stats/home-logo.png")}
+                  style={styles.heroLogo}
+                  resizeMode="contain"
+                />
               </View>
             </View>
 
-            {familyName ? (
-              <View style={styles.familyBadgeCenter}>
-                <View style={styles.familyBadge}>
-                  <Text style={styles.familyBadgeText} numberOfLines={1}>
-                    {tr("home.familyPrefix", "Family")} {String(familyName)}
-                  </Text>
-                </View>
-              </View>
-            ) : null}
-
             <View style={{ height: 10 }} />
 
-            {isParent ? (
-              <Segmented3
-                a={tr("home.scope.family", "Family")}
-                b={myName}
-                c={tr("home.scope.kids", "Kids")}
-                value={scope3}
-                onChange={setScope3}
-              />
-            ) : (
-              <View style={styles.segmentWrap}>
-                <View style={[styles.segmentBtn, styles.segmentOn, { flex: 1 }]}>
-                  <Text style={[styles.segmentText, styles.segmentTextOn]} numberOfLines={1}>
-                    {myName}
-                  </Text>
-                </View>
+            <View style={styles.scopeRow}>
+              <View style={{ flex: 1 }}>
+                <Segmented3
+                  a={tr("home.scope.family", "Family")}
+                  b={myName}
+                  c={tr("home.scope.kids", "Kids")}
+                  value={scope3}
+                  onChange={setScope3}
+                />
               </View>
-            )}
+            </View>
+
+            <View style={{ height: 8 }} />
+            <View style={styles.hintRow}>
+              <Text style={styles.sectionHint} numberOfLines={1}>
+                {scopeHint}
+              </Text>
+
+              <View style={styles.infoSlot}>
+              <InfoButton
+                onPress={() =>
+                  openInfo(
+                    tr("home.info.scope.title", "Views"),
+                    tr(
+                      "home.info.scope.body",
+                      "Me shows tasks that are for you. Family shows all tasks in your family. Kids shows tasks for all kids.\n\nTip: Home starts on Me so you can focus on what you need to do first."
+                    )
+                  )
+                }
+              />
+            </View>
+            </View>
 
             <View style={{ height: 14 }} />
 
@@ -554,7 +642,7 @@ export default function HomeScreen() {
       return (
         <View style={{ marginTop: 10, marginBottom: 8 }}>
           <View style={styles.sectionRow}>
-            <View style={{ flex: 1 }}>
+            <View style={{ flex: 1, paddingRight: 10 }}>
               <Text style={styles.sectionTitle}>
                 {item.title} <Text style={{ color: theme.colors.muted }}>({item.count})</Text>
               </Text>
@@ -565,174 +653,247 @@ export default function HomeScreen() {
               ) : null}
             </View>
 
-            {item.key === "review" && isParent ? (
-              <View style={styles.sectionPill}>
-                <Text style={styles.sectionPillText}>{tr("home.badge.attention", "ATTN")}</Text>
-              </View>
+            <View style={styles.infoSlot}>
+              {item.key === "review" ? (
+              <InfoButton
+                onPress={() =>
+                  openInfo(
+                    tr("home.info.review.title", "Waiting for approval"),
+                    isParent
+                      ? tr(
+                          "home.info.review.body.parent",
+                          "These tasks were completed by children and are waiting for your confirmation.\n\nTap Approve to mark them as done, or Not done to ask for changes."
+                        )
+                      : tr(
+                          "home.info.review.body.child",
+                          "You marked these tasks as done. They are waiting for a parent to confirm."
+                        )
+                  )
+                }
+              />
             ) : null}
+            </View>
           </View>
         </View>
       );
     }
+const task = item.item;
+const status = getStatus(task);
 
-    const task = item.item;
-    const status = getStatus(task);
-    const statusLabel = getStatusLabel(tr, status);
+const dueAt = (task as any)?.dueAt ? Number((task as any).dueAt) : null;
+const dueText = dueAt ? formatDueInline(dueAt) : "";
+const isOverdue = !!(dueAt && status !== "done" && dueAt < now.getTime());
 
-    const dueAt = (task as any)?.dueAt ? Number((task as any).dueAt) : null;
-    const dueText = dueAt ? toHHMM(dueAt) : "";
-    const isOverdue = !!(dueAt && status !== "done" && dueAt < today0);
+const assignedToId = (task as any)?.assignedToId ?? null;
+const assignedToName = (task as any)?.assignedToName ?? null;
 
-    const assignedToId = (task as any)?.assignedToId ?? null;
-    const assignedToName = (task as any)?.assignedToName ?? null;
+const hasAssignee = Boolean(assignedToId || assignedToName);
+const isUnassigned = !Boolean(assignedToId);
 
-    const isMine = Boolean(myId && (task as any)?.claimedById && String((task as any).claimedById) === String(myId));
+const isMine = Boolean(myId && (task as any)?.claimedById && String((task as any).claimedById) === String(myId));
+const isAssignee = Boolean(myId && assignedToId && String(assignedToId) === String(myId));
 
-    const canClaim = status === "open" && (!assignedToId || String(assignedToId) === String(myId));
-    const canUnclaim = status === "claimed" && isMine;
-    const canRequest = status === "claimed" && isMine;
-    const canApprove = status === "review" && isParent;
-    const canReject = status === "review" && isParent;
+// Simplified UX (same as Tasks tab):
+// - "I'll do it" only for open+unassigned
+// - "Mark done" for assignee when open (auto-claim+request), and for claimer when claimed
+// - Parent review: Approve / Not done
+// - Leave only for claimed+unassigned tasks (so someone else can take it)
+const canTake = status === "open" && isUnassigned;
+const canLeave = status === "claimed" && isMine && isUnassigned;
 
-    const rrRaw = (task as any)?.repeatRule ?? null;
-    let isAuto = false;
-    try {
-      const obj = typeof rrRaw === "string" ? JSON.parse(rrRaw) : rrRaw;
-      const preset = String(obj?.preset ?? obj?.kind ?? "").toLowerCase();
-      isAuto = preset === "interval" && !!obj?.days && Boolean(obj?.autoComplete ?? obj?.noApproval ?? false);
-    } catch {
-      isAuto = false;
-    }
-    const canAutoDone = isAuto && status !== "done" && status !== "review";
+const canMarkDone = (status === "open" && isAssignee) || (status === "claimed" && isMine);
+const canApprove = status === "review" && isParent;
 
-    const busy = busyId === String((task as any).id);
+const rrRaw = (task as any)?.repeatRule ?? null;
+let isAuto = false;
+try {
+  const obj = typeof rrRaw === "string" ? JSON.parse(rrRaw) : rrRaw;
+  const preset = String(obj?.preset ?? obj?.kind ?? "").toLowerCase();
+  isAuto = preset === "interval" && !!obj?.days && Boolean(obj?.autoComplete ?? obj?.noApproval ?? false);
+} catch {
+  isAuto = false;
+}
+const canAutoDone = isAuto && status !== "done" && status !== "review";
 
-    return (
-      <Card style={styles.taskCard}>
-        <View style={styles.taskRow}>
-          <View style={[styles.statusBar, getStatusBarStyle(status, isOverdue)]} />
-          <View style={styles.taskContent}>
-            <View style={styles.taskHeader}>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.taskTitle} numberOfLines={2}>
-                  {String((task as any)?.title ?? "")}
+const busy = busyId === String((task as any).id);
+
+const actionInfo = (() => {
+  if (status === "open") {
+    return {
+      title: tr("home.info.actions.title", "Buttons"),
+      body: tr(
+        "home.info.actions.open",
+        "I'll do it: take this task if it has no assigned person.\n\nA task can be taken by only one person at a time."
+      ),
+    };
+  }
+  if (status === "claimed") {
+    return {
+      title: tr("home.info.actions.title", "Buttons"),
+      body: tr(
+        "home.info.actions.claimed",
+        "Mark done: send the task for approval.\n\nLeave: put it back so someone else can take it."
+      ),
+    };
+  }
+  if (status === "review") {
+    return {
+      title: tr("home.info.actions.title", "Buttons"),
+      body: isParent
+        ? tr(
+            "home.info.actions.review.parent",
+            "Approve: confirm the task is done.\n\nNot done: send it back for changes."
+          )
+        : tr("home.info.actions.review.child", "This task is waiting for a parent to confirm it."),
+    };
+  }
+  return null;
+})();
+
+return (
+  <Card style={styles.taskCard}>
+    <View style={styles.taskRow}>
+      <View style={[styles.statusBar, getStatusBarStyle(status, isOverdue)]} />
+      <View style={styles.taskContent}>
+        <View style={styles.taskHeader}>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.taskTitle} numberOfLines={2}>
+              {String((task as any)?.title ?? "")}
+            </Text>
+
+            <View style={{ height: 6 }} />
+
+            <Text style={styles.taskMeta} numberOfLines={2}>
+              {dueAt ? `${isOverdue ? "⚠️ " : ""}⏰ ${dueText}` : tr("tasks.due.none", "No due time")}
+            </Text>
+
+            {assignedToName ? (
+              <>
+                <View style={{ height: 4 }} />
+                <Text style={styles.taskMeta} numberOfLines={1}>
+                  {`${tr("tasks.assignedTo", "Assigned to")}: ${String(assignedToName)}`}
                 </Text>
+              </>
+            ) : null}
+          </View>
 
-                <View style={{ height: 6 }} />
+          <TaskTimeline
+            status={status}
+            hintText={
+              hasAssignee
+                ? tr("tasks.timelineHint.assigned", "Assigned → Done → Approved")
+                : tr("tasks.timelineHint.created", "Created → Done → Approved")
+            }
+          />
+        </View>
 
-                <Text style={styles.taskMeta} numberOfLines={2}>
-                  {dueAt ? `${isOverdue ? "⚠️ " : ""}⏰ ${dueText}` : tr("tasks.due.none", "No due time")}
-                </Text>
+        {(canAutoDone || canTake || canLeave || canMarkDone || canApprove) ? (
+          <View style={styles.actionsRow}>
+            <View style={styles.actionsLeft}>
+              {canAutoDone ? (
+                <Button
+                  title={tr("tasks.action.doneAuto", "Done")}
+                  onPress={() => {
+                    if (!myId) return;
+                    runAction(task, async () => {
+                      await (completeAuto as any)?.(String((task as any).id), myId ?? "", myName);
+                    });
+                  }}
+                  style={styles.actionBtn}
+                  textStyle={styles.actionBtnText}
+                  disabled={busy || !myId}
+                />
+              ) : null}
 
-                {assignedToName ? (
-                  <>
-                    <View style={{ height: 4 }} />
-                    <Text style={styles.taskMeta} numberOfLines={1}>
-                      {`${tr("tasks.assignedTo", "Assigned to")}: ${String(assignedToName)}`}
-                    </Text>
-                  </>
-                ) : null}
-              </View>
+              {canTake ? (
+                <Button
+                  title={tr("tasks.action.illDoIt", "I'll do it")}
+                  onPress={() => {
+                    if (!myId) return;
+                    runAction(task, async () => {
+                      await claimTask(String((task as any).id), myId, myName);
+                    });
+                  }}
+                  style={styles.actionBtn}
+                  textStyle={styles.actionBtnText}
+                  disabled={busy || !myId}
+                />
+              ) : null}
 
-              <StatusBadge label={statusLabel} />
-            </View>
-
-            {(canAutoDone || canClaim || canUnclaim || canRequest || canApprove || canReject) ? (
-              <View style={styles.actionsRow}>
-                {canClaim ? (
-                  <Button
-                    title={tr("tasks.action.claim", "Claim")}
-                    onPress={() => {
-                      if (!myId) return;
-                      runAction(task, async () => {
+              {canMarkDone ? (
+                <Button
+                  title={tr("tasks.action.markDone", "Mark done")}
+                  onPress={() => {
+                    if (!myId) return;
+                    runAction(task, async () => {
+                      // One-tap flow:
+                      // - If open: auto-claim then request done
+                      // - If claimed: request done
+                      if (String((task as any)?.status ?? "open") === "open") {
                         await claimTask(String((task as any).id), myId, myName);
-                      });
-                    }}
-                    style={styles.actionBtn}
-                    textStyle={styles.actionBtnText}
-                    disabled={busy || !myId}
-                  />
-                ) : null}
-
-                {canAutoDone ? (
-                  <Button
-                    title={tr("tasks.action.doneAuto", "Done")}
-                    onPress={() => {
-                      if (!myId) return;
-                      runAction(task, async () => {
-                        await (completeAuto as any)?.(String((task as any).id), myId ?? "", myName);
-                      });
-                    }}
-                    style={styles.actionBtn}
-                    textStyle={styles.actionBtnText}
-                    disabled={busy || !myId}
-                  />
-                ) : null}
-
-                {canRequest ? (
-                  <Button
-                    title={tr("tasks.action.requestDone", "Request done")}
-                    onPress={() => {
-                      if (!myId) return;
-                      runAction(task, async () => {
-                        await requestDone(String((task as any).id), myId, myName);
-                      });
-                    }}
-                    style={styles.actionBtn}
-                    textStyle={styles.actionBtnText}
-                    disabled={busy || !myId}
-                  />
-                ) : null}
-
-                {canApprove ? (
-                  <>
-                    <Button
-                      title={tr("tasks.action.approve", "Approve")}
-                      onPress={() =>
-                        runAction(task, async () => {
-                          await approveDone(String((task as any).id));
-                        })
                       }
-                      style={styles.actionBtn}
-                      textStyle={styles.actionBtnText}
-                      disabled={busy || !myId}
-                    />
-                    {canReject ? (
-                      <Button
-                        title={tr("tasks.action.reject", "Reject")}
-                        onPress={() =>
-                          runAction(task, async () => {
-                            await rejectDone(String((task as any).id));
-                          })
-                        }
-                        style={[styles.actionBtn, { opacity: 0.92 }]}
-                        textStyle={styles.actionBtnText}
-                        disabled={busy || !myId}
-                      />
-                    ) : null}
-                  </>
-                ) : null}
+                      await requestDone(String((task as any).id), myId, myName);
+                    });
+                  }}
+                  style={styles.actionBtn}
+                  textStyle={styles.actionBtnText}
+                  disabled={busy || !myId}
+                />
+              ) : null}
 
-                {canUnclaim ? (
+              {canApprove ? (
+                <>
                   <Button
-                    title={tr("tasks.action.unclaim", "Unclaim")}
-                    variant="secondary"
+                    title={tr("tasks.action.approve", "Approve")}
                     onPress={() =>
                       runAction(task, async () => {
-                        await unclaimTask(String((task as any).id));
+                        await approveDone(String((task as any).id));
                       })
                     }
                     style={styles.actionBtn}
                     textStyle={styles.actionBtnText}
                     disabled={busy || !myId}
                   />
-                ) : null}
-              </View>
-            ) : null}
+                  <Button
+                    title={tr("tasks.action.notDone", "Not done")}
+                    variant="secondary"
+                    onPress={() =>
+                      runAction(task, async () => {
+                        await rejectDone(String((task as any).id));
+                      })
+                    }
+                    style={[styles.actionBtn, { opacity: 0.92 }]}
+                    textStyle={styles.actionBtnText}
+                    disabled={busy || !myId}
+                  />
+                </>
+              ) : null}
+
+              {canLeave ? (
+                <Button
+                  title={tr("tasks.action.leave", "Leave")}
+                  variant="secondary"
+                  onPress={() =>
+                    runAction(task, async () => {
+                      await unclaimTask(String((task as any).id));
+                    })
+                  }
+                  style={styles.actionBtn}
+                  textStyle={styles.actionBtnText}
+                  disabled={busy || !myId}
+                />
+              ) : null}
+            </View>
+
+            <View style={styles.infoSlot}>
+              {actionInfo ? <InfoButton onPress={() => openInfo(actionInfo.title, actionInfo.body)} /> : null}
+            </View>
           </View>
-        </View>
-      </Card>
-    );
+        ) : null}
+      </View>
+    </View>
+  </Card>
+);
   }
 
   return (
@@ -750,10 +911,43 @@ export default function HomeScreen() {
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
           showsVerticalScrollIndicator={false}
         />
+
+        <InfoSheet
+          visible={infoVisible}
+          title={infoTitle}
+          body={infoBody}
+          okLabel={tr("common.ok", "OK")}
+          onClose={() => setInfoVisible(false)}
+        />
       </View>
     </Screen>
   );
 }
+
+const PALETTE = {
+  text: "#0B1220",
+  muted: "#667085",
+  primary: "#2F6BFF",
+  card: "rgba(255,255,255,0.94)",
+  cardStrong: "rgba(255,255,255,0.96)",
+  border: "rgba(140,160,190,0.18)",
+  borderBlue: "rgba(47,107,255,0.30)",
+};
+
+const FROST = {
+  bg: PALETTE.card,
+  bgStrong: PALETTE.cardStrong,
+  borderSoft: PALETTE.border,
+  shadow:
+    Platform.OS === "android"
+      ? { elevation: 5 }
+      : {
+          shadowColor: "#000",
+          shadowOpacity: 0.08,
+          shadowRadius: 18,
+          shadowOffset: { width: 0, height: 8 },
+        },
+};
 
 const styles: any = {
   heroCard: {
@@ -762,7 +956,7 @@ const styles: any = {
     backgroundColor: "#fff",
     borderRadius: 22,
     padding: 14,
-    overflow: "hidden",
+    overflow: "visible",
     ...Platform.select({
       android: { elevation: 1 },
       ios: {
@@ -773,6 +967,23 @@ const styles: any = {
       },
       default: {},
     }),
+  },
+
+  // Hero logo header (replaces old title + clock/date)
+  heroHeader: {
+    alignItems: "center",
+    justifyContent: "center",
+    paddingTop: 6,
+    paddingBottom: 10,
+  },
+  heroLogoWrap: {
+    marginTop: -45, // 👈 overlaps outside the card for a “wow” effect
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  heroLogo: {
+    width: 230,
+    height: 150,
   },
 
   headerRow: {
@@ -882,6 +1093,82 @@ const styles: any = {
     opacity: 0.9,
   },
 
+  scopeRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+
+  hintRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 10,
+  },
+
+  infoSlot: {
+    width: 28,
+    alignItems: "flex-end",
+    justifyContent: "center",
+  },
+
+  infoBtn: {
+    // Smaller + softer blue so it doesn't steal focus
+    height: 22,
+    width: 22,
+    borderRadius: 11,
+    borderWidth: 1,
+    borderColor: "#60A5FA",
+    backgroundColor: "#60A5FA",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  infoBtnText: {
+    fontSize: 11,
+    fontWeight: "800",
+    color: "#fff",
+    marginTop: -0.5,
+  },
+
+  infoBackdrop: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.35)",
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 16,
+  },
+  infoCard: {
+    width: "100%",
+    maxWidth: 420,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: "#e5e7eb",
+    backgroundColor: "#fff",
+    padding: 14,
+  },
+  infoTitle: {
+    fontSize: 14,
+    fontWeight: "900",
+    color: theme.colors.text,
+  },
+  infoBody: {
+    marginTop: 8,
+    fontSize: 12,
+    fontWeight: "700",
+    color: theme.colors.muted,
+    lineHeight: 18,
+  },
+  infoOkBtn: {
+    height: 34,
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    alignSelf: "flex-end",
+  },
+  infoOkText: {
+    fontSize: 12,
+    fontWeight: "900",
+  },
+
   statsRow: {
     flexDirection: "row",
     gap: 10,
@@ -976,7 +1263,7 @@ const styles: any = {
   sectionRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 12,
+    justifyContent: "space-between",
   },
   sectionTitle: {
     fontSize: 15,
@@ -1005,78 +1292,122 @@ const styles: any = {
     fontWeight: "900",
     color: "#be123c",
   },
+taskCard: {
+  marginBottom: 12,
+  padding: 14,
+  borderWidth: 1,
+  borderColor: FROST.borderSoft,
+  backgroundColor: FROST.bg,
+  borderRadius: 22,
+  ...FROST.shadow,
+},
+taskRow: {
+  flexDirection: "row",
+  alignItems: "stretch",
+},
+statusBar: {
+  width: 5,
+  marginLeft: -14,
+  marginRight: 14,
+  marginTop: 12,
+  marginBottom: 12,
+  borderTopRightRadius: 4,
+  borderBottomRightRadius: 4,
+  opacity: 0.95,
+},
+taskContent: {
+  flex: 1,
+},
+taskHeader: {
+  flexDirection: "row",
+  alignItems: "flex-start",
+  justifyContent: "space-between",
+  gap: 12,
+},
+taskTitle: {
+  fontWeight: "800",
+  fontSize: 17,
+  color: PALETTE.text,
+  letterSpacing: -0.2,
+},
+taskMeta: {
+  color: PALETTE.muted,
+  fontWeight: "700",
+  fontSize: 12,
+},
 
-  taskCard: {
-    marginBottom: 10,
-    padding: 12,
-  },
-  taskRow: {
-    flexDirection: "row",
-    alignItems: "stretch",
-  },
-  statusBar: {
-    width: 4,
-    marginLeft: -12,
-    marginRight: 12,
-    marginTop: 10,
-    marginBottom: 10,
-    borderTopRightRadius: 2,
-    borderBottomRightRadius: 2,
-    opacity: 0.95,
-  },
-  taskContent: {
-    flex: 1,
-  },
-  taskHeader: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    justifyContent: "space-between",
-    gap: 12,
-  },
-  taskTitle: {
-    fontWeight: "900",
-    fontSize: 16,
-    color: theme.colors.text,
-  },
-  taskMeta: {
-    color: theme.colors.muted,
-    fontWeight: "800",
-    fontSize: 12,
-  },
+// Timeline (replaces status badge)
+tlWrap: {
+  alignSelf: "flex-start",
+  alignItems: "flex-end",
+  minWidth: 120,
+},
+tlRow: {
+  flexDirection: "row",
+  alignItems: "center",
+},
+tlDot: {
+  width: 10,
+  height: 10,
+  borderRadius: 999,
+  borderWidth: 2,
+},
+tlDotDone: {
+  backgroundColor: PALETTE.primary,
+  borderColor: PALETTE.primary,
+},
+tlDotActive: {
+  backgroundColor: "transparent",
+  borderColor: PALETTE.primary,
+},
+tlDotPending: {
+  backgroundColor: "transparent",
+  borderColor: PALETTE.border,
+},
+tlLine: {
+  height: 2,
+  width: 18,
+  marginHorizontal: 4,
+  borderRadius: 999,
+},
+tlLineDone: {
+  backgroundColor: PALETTE.primary,
+  opacity: 0.9,
+},
+tlLinePending: {
+  backgroundColor: PALETTE.border,
+  opacity: 0.9,
+},
+tlHint: {
+  marginTop: 4,
+  fontSize: 10,
+  fontWeight: "800",
+  color: PALETTE.muted,
+},
 
-  statusBadge: {
-    alignSelf: "flex-end",
-    paddingHorizontal: 10,
-    height: 26,
-    borderRadius: 13,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    backgroundColor: theme.colors.surface,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  statusBadgeText: {
-    fontWeight: "900",
-    fontSize: 12,
-    color: theme.colors.muted,
-  },
-
-  actionsRow: {
-    marginTop: 10,
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 6,
-    alignItems: "flex-start",
-  },
-  actionBtn: {
-    height: 32,
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    minWidth: 82,
-    alignSelf: "flex-start",
-  },
-  actionBtnText: {
-    fontSize: 12,
-    fontWeight: "900",
-  },
+actionsRow: {
+  marginTop: 12,
+  flexDirection: "row",
+  alignItems: "flex-start",
+  justifyContent: "space-between",
+  gap: 10,
+},
+actionsLeft: {
+  flex: 1,
+  flexDirection: "row",
+  flexWrap: "wrap",
+  gap: 8,
+  alignItems: "flex-start",
+},
+actionBtn: {
+  height: 34,
+  borderRadius: 14,
+  paddingHorizontal: 12,
+  minWidth: 86,
+  alignSelf: "flex-start",
+},
+actionBtnText: {
+  fontSize: 12,
+  fontWeight: "900",
+},
 };

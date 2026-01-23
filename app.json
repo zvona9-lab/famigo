@@ -1,46 +1,36 @@
 {
   "expo": {
+    "platforms": [
+      "ios",
+      "android"
+    ],
     "name": "famigo",
     "slug": "famigo",
-    "version": "2.0.0",
+    "version": "5.1.1",
     "orientation": "portrait",
-    "icon": "./assets/images/icon.png",
+    "icon": "./assets/images/famigo-icon.png",
     "scheme": "famigo",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.agrofarm.famigo",
+      "buildNumber": "5",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
+      "googleServicesFile": "./google-services.json",
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
-        "foregroundImage": "./assets/images/android-icon-foreground.png",
-        "backgroundImage": "./assets/images/android-icon-background.png",
-        "monochromeImage": "./assets/images/android-icon-monochrome.png"
+        "foregroundImage": "./assets/images/famigo-adaptive-icon.png",
+        "backgroundImage": "./assets/images/famigo-adaptive-icon-background.png"
       },
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
-      "intentFilters": [
-        {
-          "action": "VIEW",
-          "autoVerify": false,
-          "data": [
-            {
-              "scheme": "famigo",
-              "host": "auth"
-            }
-          ],
-          "category": [
-            "BROWSABLE",
-            "DEFAULT"
-          ]
-        }
-      ],
-      "permissions": [
-        "android.permission.CAMERA"
-      ],
+      "softwareKeyboardLayoutMode": "resize",
       "package": "com.famigo.app",
-      "versionCode": 2
+      "versionCode": 24
     },
     "web": {
       "output": "static",
@@ -73,6 +63,12 @@
         "projectId": "0522a255-48c6-4a0d-8caa-1ad8ee8139b0"
       }
     },
-    "owner": "agrofarm"
+    "owner": "agrofarm",
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/0522a255-48c6-4a0d-8caa-1ad8ee8139b0"
+    }
   }
 }

@@ -1,8 +1,8 @@
-// /app/(tabs)/members.tsx
 import React, { useEffect, useMemo, useState } from "react";
 import {
   Alert,
   FlatList,
+  Image,
   KeyboardAvoidingView,
   Modal,
   Platform,
@@ -30,8 +30,122 @@ type MemberRow = {
   id: string;
   name: string;
   role: "parent" | "child";
+  gender?: "male" | "female" | null;
+  avatarKey?: "mom" | "dad" | "girl" | "boy" | null;
   tasksDoneToday: number;
 };
+
+/**
+ * AVATARI (4 kom)
+ *
+ * Preporučena putanja (u rootu projekta):
+ *  /assets/avatars/mom.png
+ *  /assets/avatars/dad.png
+ *  /assets/avatars/girl.png
+ *  /assets/avatars/boy.png
+ *
+ * Ako ti je folder drugačiji, samo promijeni require() putanje ispod.
+ */
+const AVATARS: Record<string, any> = {
+  mom: require("../../assets/avatars/mom.png"),
+  dad: require("../../assets/avatars/dad.png"),
+  girl: require("../../assets/avatars/girl.png"),
+  boy: require("../../assets/avatars/boy.png"),
+};
+
+function resolveAvatarKey(m: { role?: string; gender?: string; avatarKey?: string }): "mom" | "dad" | "girl" | "boy" {
+  const role = m?.role === "child" ? "child" : "parent";
+  const g = m?.gender === "female" ? "female" : m?.gender === "male" ? "male" : null;
+  const key = m?.avatarKey;
+  if (key === "mom" || key === "dad" || key === "girl" || key === "boy") return key;
+
+  if (role === "parent") {
+    if (g === "female") return "mom";
+    return "dad";
+  }
+  if (g === "female") return "girl";
+  return "boy";
+}
+
+function AvatarStack({
+  avatarKeys,
+  size = 18,
+}: {
+  avatarKeys: string[];
+  size?: number;
+}) {
+  const overlap = Math.round(size * 0.35);
+
+  return (
+    <View style={[styles.avatarStack, { height: size }]}>
+      {avatarKeys.map((k, i) => {
+        const src = (AVATARS as any)[k] ?? (AVATARS as any).boy;
+        return (
+          <View
+            key={`${k}-${i}`}
+            style={[
+              styles.avatarMiniWrap,
+              {
+                width: size,
+                height: size,
+                marginLeft: i === 0 ? 0 : -overlap,
+                borderRadius: size / 2,
+              },
+            ]}
+          >
+            <Image source={src} style={{ width: size, height: size, borderRadius: size / 2 }} resizeMode="cover" />
+          </View>
+        );
+      })}
+    </View>
+  );
+}
+
+function StatPill({
+  image,
+  label,
+  value,
+  tint,
+}: {
+  image: any;
+  label: string;
+  value: number | string;
+  tint: "blue" | "green" | "gray";
+}) {
+  const primary = (theme as any)?.colors?.primary ?? "#2563eb";
+  const tintStyle =
+    tint === "green"
+      ? {
+          bg: "#ECFDF3",
+          border: "#86efac",
+          text: "#166534",
+        }
+      : tint === "gray"
+      ? {
+          bg: "#F3F4F6",
+          border: "#E5E7EB",
+          text: "#374151",
+        }
+      : {
+          bg: primary + "14",
+          border: primary + "35",
+          text: primary,
+        };
+
+  return (
+    <View style={[styles.statCard, { backgroundColor: tintStyle.bg, borderColor: tintStyle.border }]}>
+      <View style={styles.statAvatarWrap}>
+        <Image source={image} style={styles.statAvatarImg} resizeMode="contain" />
+      </View>
+      <Text style={styles.statCardValue} numberOfLines={1}>
+        {String(value)}
+      </Text>
+      <Text style={styles.statCardLabel} numberOfLines={1}>
+        {label}
+      </Text>
+    </View>
+  );
+}
 
 function getT() {
   const tx = useT() as any;
@@ -103,10 +217,22 @@ export default function MembersScreen() {
   const t = getT();
   const { locale } = useLocale();
 
+  // ✅ FIX 1: osiguraj interpolaciju (ako i18n ne odradi params, mi ćemo)
   function tr(key: string, fallback: string, params?: Record<string, any>) {
-    const v = t?.(key, params);
-    if (!v) return fallback;
-    if (typeof v === "string" && v.startsWith("[missing")) return fallback;
+    let v = t?.(key, params);
+    if (!v) v = fallback;
+    if (typeof v === "string" && v.startsWith("[missing")) v = fallback;
+
+    if (typeof v === "string" && params && Object.keys(params).length) {
+      // manual interpolation fallback: "{{n}}", "{{name}}", etc.
+      let out = v;
+      for (const [k, val] of Object.entries(params)) {
+        const token = `{{${k}}}`;
+        out = out.split(token).join(String(val));
+      }
+      return out;
+    }
+
     return v as string;
   }
 
@@ -162,8 +288,17 @@ export default function MembersScreen() {
 
       return {
         id: String(m?.id ?? ""),
-        name: String(m?.name ?? "").trim() || (m?.role === "child" ? tr("members.defaultChild", "Child") : tr("members.defaultParent", "Parent")),
+        name:
+          String(m?.name ?? "").trim() ||
+          (m?.role === "child" ? tr("members.defaultChild", "Child") : tr("members.defaultParent", "Parent")),
         role: m?.role === "child" ? "child" : "parent",
+        gender: m?.gender === "female" ? "female" : m?.gender === "male" ? "male" : null,
+        avatarKey:
+          m?.avatar_key === "mom" || m?.avatar_key === "dad" || m?.avatar_key === "girl" || m?.avatar_key === "boy"
+            ? m.avatar_key
+            : m?.avatarKey === "mom" || m?.avatarKey === "dad" || m?.avatarKey === "girl" || m?.avatarKey === "boy"
+              ? m.avatarKey
+              : null,
         tasksDoneToday: doneToday,
       };
     });
@@ -172,9 +307,16 @@ export default function MembersScreen() {
   const stats = useMemo(() => {
     const parents = members.filter((m) => m.role === "parent").length;
     const kids = members.filter((m) => m.role === "child").length;
-    const doneToday = members.reduce((sum, m) => sum + m.tasksDoneToday, 0);
-    return { parents, kids, doneToday, total: members.length };
+    return { parents, kids, total: members.length };
   }, [members]);
+
+  const myName = useMemo(() => {
+    const me = (Array.isArray(storeMembers) ? storeMembers : []).find(
+      (m: any) => String(m?.id ?? "") === String(myId ?? "")
+    );
+    const nm = String(me?.name ?? "").trim();
+    return nm || tr("common.me", "Me");
+  }, [storeMembers, myId]);
 
   const [filter, setFilter] = useState<"all" | "parents" | "kids">("all");
   const filtered = useMemo(() => {
@@ -193,8 +335,10 @@ export default function MembersScreen() {
     }
   }
 
-  const resolvedFamilyName = familyName ?? tr("members.familyNameFallback", locale === "hr" ? "Obitelj" : "Family");
+  const resolvedFamilyName = familyName ?? tr("members.familyNameFallback", "My Family");
   const primary = (theme as any)?.colors?.primary ?? "#2563eb";
+
+  // ✅ FIX 2: "Done today" predugačko -> "Done" (jedan ključ)
 
   // ===== ACTIONS SHEET =====
   const [actionsOpen, setActionsOpen] = useState(false);
@@ -221,9 +365,7 @@ export default function MembersScreen() {
       setActionsOpen(false);
       Alert.alert(
         tr("common.info", "Info"),
-        locale === "hr"
-          ? "Moje ime mijenjaš u Postavke → Profil."
-          : "Change your own name in Settings → Profile."
+        tr("members.changeOwnNameHint", "Change your own name in Settings → Profile.")
       );
       return;
     }
@@ -242,32 +384,29 @@ export default function MembersScreen() {
       const ok = await renameMember?.(selected.id, clean);
       if (!ok) return;
 
-      // optional: keep tasks metadata in sync (if you store claimedByName locally)
       try {
         await syncMemberName?.(selected.id, clean);
-      } catch {
-        // ignore
-      }
+      } catch {}
 
       setRenameOpen(false);
       setRenameDraft("");
       await refreshMembers?.();
     } catch (e: any) {
-      Alert.alert(tr("common.error", locale === "hr" ? "Greška" : "Error"), String(e?.message ?? e));
+      Alert.alert(tr("common.error", "Error"), String(e?.message ?? e));
     }
   }
 
   async function trySetRole(nextRole: MemberRole) {
     if (!selected) return;
 
-    // Block demoting the last parent
     if (selected.role === "parent" && nextRole === "child" && selectedIsLastParent) {
       setActionsOpen(false);
       Alert.alert(
         tr("common.info", "Info"),
-        locale === "hr"
-          ? "Ne možeš promijeniti ulogu zadnjeg roditelja. Dodaj još jednog roditelja pa pokušaj opet."
-          : "You cannot change the role of the last parent. Add another parent first."
+        tr(
+          "members.lastParentCantChangeRole",
+          "You cannot change the role of the last parent. Add another parent first."
+        )
       );
       return;
     }
@@ -279,7 +418,7 @@ export default function MembersScreen() {
 
       await refreshMembers?.();
     } catch (e: any) {
-      Alert.alert(tr("common.error", locale === "hr" ? "Greška" : "Error"), String(e?.message ?? e));
+      Alert.alert(tr("common.error", "Error"), String(e?.message ?? e));
     }
   }
 
@@ -287,14 +426,11 @@ export default function MembersScreen() {
     if (!selected) return;
     if (isSelectedSelf) return;
 
-    // Block removing the last parent
     if (selected.role === "parent" && selectedIsLastParent) {
       setActionsOpen(false);
       Alert.alert(
         tr("common.info", "Info"),
-        locale === "hr"
-          ? "Ne možeš obrisati zadnjeg roditelja. Dodaj još jednog roditelja pa pokušaj opet."
-          : "You cannot remove the last parent. Add another parent first."
+        tr("members.lastParentCantRemove", "You cannot remove the last parent. Add another parent first.")
       );
       return;
     }
@@ -302,46 +438,30 @@ export default function MembersScreen() {
     setActionsOpen(false);
 
     Alert.alert(
-      locale === "hr" ? "Obrisati člana?" : "Remove member?",
-      locale === "hr"
-        ? "Zadaci ostaju, ali se uklanja član i sve dodjele tom članu."
-        : "Tasks remain, but the member is removed and any assignments to them are cleared.",
+      tr("members.removeTitle", "Remove member?"),
+      tr("members.removeBody", "Tasks remain, but the member is removed and any assignments to them are cleared."),
       [
-        { text: tr("common.cancel", locale === "hr" ? "Odustani" : "Cancel"), style: "cancel" },
+        { text: tr("common.cancel", "Cancel"), style: "cancel" },
         {
-          text: tr("common.delete", locale === "hr" ? "Obriši" : "Delete"),
+          text: tr("common.delete", "Delete"),
           style: "destructive",
           onPress: async () => {
             try {
-              // optional: local tasks cleanup first (if you have it)
               try {
                 await unassignByMemberId?.(selected.id);
-              } catch {
-                // ignore
-              }
+              } catch {}
 
               const ok = await removeMember?.(selected.id);
               if (!ok) return;
 
               await refreshMembers?.();
             } catch (e: any) {
-              Alert.alert(tr("common.error", locale === "hr" ? "Greška" : "Error"), String(e?.message ?? e));
+              Alert.alert(tr("common.error", "Error"), String(e?.message ?? e));
             }
           },
         },
       ]
     );
-  }
-
-  // UI helpers
-  function roleIcon(role: "parent" | "child") {
-    return role === "parent" ? "people-outline" : "happy-outline";
-  }
-  function roleIconBg(role: "parent" | "child") {
-    return role === "parent" ? styles.roleIconParent : styles.roleIconChild;
-  }
-  function roleIconColor(role: "parent" | "child") {
-    return role === "parent" ? primary : "#166534";
   }
 
   const useGrid = filtered.length > 0 && filtered.length <= 6;
@@ -350,7 +470,7 @@ export default function MembersScreen() {
     return (
       <Screen>
         <View style={{ padding: 16 }}>
-          <EmptyState title={tr("common.loading", locale === "hr" ? "Učitavam..." : "Loading...")} />
+          <EmptyState title={tr("common.loading", "Loading...")} />
         </View>
       </Screen>
     );
@@ -361,8 +481,8 @@ export default function MembersScreen() {
       <Screen>
         <View style={{ padding: 16 }}>
           <EmptyState
-            title={locale === "hr" ? "Nisi još u obitelji." : "You are not in a family yet."}
-            subtitle={locale === "hr" ? "Uđi u obitelj u Postavke → Obitelj." : "Join/create a family in Settings → Family."}
+            title={tr("members.noFamilyTitle", "You are not in a family yet.")}
+            subtitle={tr("members.noFamilyBody", "Join/create a family in Settings → Family.")}
           />
         </View>
       </Screen>
@@ -376,57 +496,57 @@ export default function MembersScreen() {
         <View style={styles.fixedTop}>
           <View style={styles.heroWrap}>
             <View style={styles.heroCard}>
-              <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start" }}>
-                <View style={{ flex: 1, paddingRight: 10 }}>
-                  <Text style={styles.heroTitle}>{tr("tabs.members", locale === "hr" ? "Članovi" : "Members")}</Text>
-                  <Text style={styles.heroSub}>
-                    {resolvedFamilyName} •{" "}
-                    {locale === "hr" ? `${stats.total} članova` : `${stats.total} members`}
-                  </Text>
-                </View>
+              <Text style={styles.heroHello} numberOfLines={1}>
+                {tr("members.hello", "Hello")}, {myName}! 👋
+              </Text>
+              <Text style={styles.heroSub}>
+                {tr("members.overview", "Here's an overview of your family activities.")}
+              </Text>
 
-                <View style={styles.heroRight}>
-                  <Text style={styles.heroTime}>{formatHHMM(now.getTime())}</Text>
-                  <Text style={styles.heroDate}>{formatLongDate(now, locale)}</Text>
-                </View>
-              </View>
-
-              <View style={styles.heroAccentBg}>
-                <View style={[styles.heroAccent, { backgroundColor: primary }]} />
+              <View style={styles.statsPillsRow}>
+                <StatPill
+                  image={require("../../assets/avatars/stats/parents.png")}
+                  label={tr("members.stats.parents", "Parents")}
+                  value={stats.parents}
+                  tint="blue"
+                />
+                <StatPill
+                  image={require("../../assets/avatars/stats/kids.png")}
+                  label={tr("members.stats.kids", "Kids")}
+                  value={stats.kids}
+                  tint="green"
+                />
+                <StatPill
+                  image={require("../../assets/avatars/stats/family.png")}
+                  label={tr("members.stats.family", "Family")}
+                  value={stats.total}
+                  tint="gray"
+                />
               </View>
             </View>
           </View>
 
-          <Card style={{ marginTop: 10, padding: 12 }}>
-            <View style={{ flexDirection: "row", gap: 10 }}>
-              <View style={styles.statBox}>
-                <Text style={styles.statLabel}>{tr("members.stats.parents", "Parents")}</Text>
-                <Text style={styles.statValue}>{stats.parents}</Text>
-              </View>
-              <View style={styles.statBox}>
-                <Text style={styles.statLabel}>{tr("members.stats.kids", "Kids")}</Text>
-                <Text style={styles.statValue}>{stats.kids}</Text>
-              </View>
-              <View style={styles.statBox}>
-                <Text style={styles.statLabel}>{tr("members.doneToday", "Done today")}</Text>
-                <Text style={styles.statValue}>{stats.doneToday}</Text>
-              </View>
-            </View>
+          <SectionTitle title={tr("tabs.members", "Members")} style={{ marginTop: 10 }} />
 
-            <View style={{ flexDirection: "row", gap: 10, marginTop: 12 }}>
-              <PressableFilter active={filter === "all"} label={tr("common.all", "All")} onPress={() => setFilter("all")} />
-              <PressableFilter active={filter === "parents"} label={tr("members.stats.parents", "Parents")} onPress={() => setFilter("parents")} />
-              <PressableFilter active={filter === "kids"} label={tr("members.stats.kids", "Kids")} onPress={() => setFilter("kids")} />
-            </View>
+          <View style={styles.segmentWrap}>
+            <PressableFilter active={filter === "all"} label={tr("common.all", "All")} onPress={() => setFilter("all")} />
+            <PressableFilter
+              active={filter === "parents"}
+              label={tr("members.stats.parents", "Parents")}
+              onPress={() => setFilter("parents")}
+            />
+            <PressableFilter
+              active={filter === "kids"}
+              label={tr("members.stats.kids", "Kids")}
+              onPress={() => setFilter("kids")}
+            />
+          </View>
 
-            {isParent ? (
-              <Text style={{ marginTop: 10, color: theme.colors.muted, fontSize: 12, fontWeight: "700" }}>
-                {tr("members.editHint", "To edit a member, tap ⋮ on their card.")}
-              </Text>
-            ) : null}
-          </Card>
-
-          <SectionTitle title={tr("members.listTitle", locale === "hr" ? "Popis članova" : "Members list")} style={{ marginTop: 14 }} />
+          {isParent ? (
+            <Text style={styles.editHint}>
+              {tr("members.editHintLongPress", "To edit a member, press and hold their card.")}
+            </Text>
+          ) : null}
         </View>
 
         {/* LIST */}
@@ -440,60 +560,74 @@ export default function MembersScreen() {
           contentContainerStyle={{ paddingBottom: 28, gap: 10 }}
           ListEmptyComponent={
             <View style={{ paddingTop: 8 }}>
-              <EmptyState title={tr("members.noMembers", locale === "hr" ? "Još nema članova." : "No members yet.")} />
+              <EmptyState title={tr("members.noMembers", "No members yet.")} />
             </View>
           }
-          renderItem={({ item: m }) => (
-            <Card style={[styles.memberCard, useGrid ? { flex: 1 } : null]}>
-              <View style={{ flexDirection: "row", alignItems: "center" }}>
-                <View style={{ flex: 1, minWidth: 0 }}>
-                  <View style={styles.memberTopRow}>
-                    <Text style={styles.memberName} numberOfLines={1}>
-                      {m.name}
-                    </Text>
+          renderItem={({ item: m }) => {
+            const avatarKey = resolveAvatarKey(m);
+            const roleLabel =
+              m.role === "parent"
+                ? avatarKey === "mom"
+                  ? tr("members.role.mom", "Mom")
+                  : tr("members.role.dad", "Dad")
+                : tr("members.role.child", "Child");
 
-                    <View style={[styles.roleIconBadge, roleIconBg(m.role)]}>
-                      <Ionicons name={roleIcon(m.role) as any} size={16} color={roleIconColor(m.role)} />
+            return (
+              <Pressable
+                onLongPress={() => {
+                  if (isParent) openActions(m);
+                }}
+                delayLongPress={350}
+                disabled={!isParent}
+                accessibilityRole={isParent ? "button" : undefined}
+                style={({ pressed }) => [
+                  useGrid ? { flex: 1 } : null,
+                  pressed && isParent ? { opacity: 0.96, transform: [{ scale: 0.99 }] } : null,
+                ]}
+              >
+                <Card style={[styles.memberCard, useGrid ? styles.memberCardGrid : styles.memberCardList]}>
+                  <View style={styles.memberRow}>
+                    <View style={styles.avatarWrap}>
+                      <Image source={AVATARS[avatarKey]} style={styles.avatarImg} resizeMode="cover" />
+                    </View>
+
+                    <View style={{ flex: 1, minWidth: 0 }}>
+                      <Text style={styles.memberName} numberOfLines={2}>
+                        {m.name}
+                      </Text>
+                      <Text style={styles.memberRole} numberOfLines={1}>
+                        {roleLabel}
+                      </Text>
                     </View>
                   </View>
-
-                  <Text style={styles.memberMeta} numberOfLines={1}>
-                    {(m.role === "parent" ? tr("members.role.parent", "Parent") : tr("members.role.child", "Child"))} •{" "}
-                    {tr("members.doneToday", "Done today")}: {m.tasksDoneToday}
-                  </Text>
-                </View>
-
-                {isParent ? (
-                  <Pressable onPress={() => openActions(m)} hitSlop={12} style={{ paddingLeft: 10, paddingVertical: 6 }}>
-                    <Ionicons name="ellipsis-vertical" size={18} color={theme.colors.muted} />
-                  </Pressable>
-                ) : null}
-              </View>
-            </Card>
-          )}
+                </Card>
+              </Pressable>
+            );
+          }}
         />
+
 
         {/* Actions bottom sheet */}
         <BottomSheet visible={actionsOpen} onClose={() => setActionsOpen(false)}>
           <Card>
             <Text style={{ fontSize: 18, fontWeight: "900", color: theme.colors.text }}>
-              {selected?.name ?? (locale === "hr" ? "Član" : "Member")}
+              {selected?.name ?? tr("members.memberFallback", "Member")}
             </Text>
             <Text style={{ color: theme.colors.muted, marginTop: 6 }}>
-              {locale === "hr" ? "Uredi člana" : "Edit member"}
+              {tr("members.editMember", "Edit member")}
             </Text>
 
             {isParent ? (
               <View style={{ marginTop: 12 }}>
                 <Text style={{ fontWeight: "900", color: theme.colors.text, marginBottom: 8 }}>
-                  {locale === "hr" ? "Uloga" : "Role"}
+                  {tr("members.roleTitle", "Role")}
                 </Text>
 
                 <View style={{ flexDirection: "row", gap: 10, flexWrap: "wrap" }}>
                   <RolePill
                     active={selected?.role === "child"}
                     icon="happy-outline"
-                    label={locale === "hr" ? "Dijete" : "Child"}
+                    label={tr("members.role.child", "Child")}
                     onPress={() => {
                       if (!selected) return;
                       if (selected.role === "child") return;
@@ -504,7 +638,7 @@ export default function MembersScreen() {
                   <RolePill
                     active={selected?.role === "parent"}
                     icon="people-outline"
-                    label={locale === "hr" ? "Roditelj" : "Parent"}
+                    label={tr("members.role.parent", "Parent")}
                     onPress={() => {
                       if (!selected) return;
                       if (selected.role === "parent") return;
@@ -515,9 +649,7 @@ export default function MembersScreen() {
 
                 {selectedIsLastParent && selected?.role === "parent" ? (
                   <Text style={{ marginTop: 10, color: theme.colors.muted, fontSize: 12, fontWeight: "700" }}>
-                    {locale === "hr"
-                      ? "Ovo je zadnji roditelj pa mu ne možeš promijeniti ulogu niti ga obrisati."
-                      : "This is the last parent, so you cannot change their role or remove them."}
+                    {tr("members.lastParentNotice", "This is the last parent, so you cannot change their role or remove them.")}
                   </Text>
                 ) : null}
               </View>
@@ -527,12 +659,12 @@ export default function MembersScreen() {
               {isParent ? (
                 <>
                   <Button
-                    title={locale === "hr" ? "Preimenuj" : "Rename"}
+                    title={tr("common.rename", "Rename")}
                     onPress={startRename}
                     disabled={!selected || isSelectedSelf}
                   />
                   <Button
-                    title={locale === "hr" ? "Obriši" : "Remove"}
+                    title={tr("common.remove", "Remove")}
                     variant="ghost"
                     onPress={confirmRemoveSelected}
                     disabled={!selected || isSelectedSelf || (selected?.role === "parent" && selectedIsLastParent)}
@@ -541,7 +673,7 @@ export default function MembersScreen() {
               ) : null}
 
               <Button
-                title={locale === "hr" ? "Odustani" : "Cancel"}
+                title={tr("common.cancel", "Cancel")}
                 variant="ghost"
                 onPress={() => setActionsOpen(false)}
               />
@@ -556,13 +688,13 @@ export default function MembersScreen() {
               <Pressable onPress={() => {}} style={{ marginTop: "auto", padding: 16 }}>
                 <Card>
                   <Text style={{ fontSize: 18, fontWeight: "900", color: theme.colors.text }}>
-                    {locale === "hr" ? "Preimenuj" : "Rename"}
+                    {tr("common.rename", "Rename")}
                   </Text>
 
                   <TextInput
                     value={renameDraft}
                     onChangeText={setRenameDraft}
-                    placeholder={locale === "hr" ? "Novo ime" : "New name"}
+                    placeholder={tr("members.newNamePlaceholder", "New name")}
                     placeholderTextColor={theme.colors.muted}
                     autoCapitalize="words"
                     style={styles.input}
@@ -570,13 +702,13 @@ export default function MembersScreen() {
 
                   <View style={{ flexDirection: "row", gap: 10, marginTop: 14 }}>
                     <Button
-                      title={locale === "hr" ? "Odustani" : "Cancel"}
+                      title={tr("common.cancel", "Cancel")}
                       variant="ghost"
                       onPress={() => setRenameOpen(false)}
                       style={{ flex: 1 }}
                     />
                     <Button
-                      title={locale === "hr" ? "Spremi" : "Save"}
+                      title={tr("common.save", "Save")}
                       onPress={saveRename}
                       disabled={!String(renameDraft ?? "").trim()}
                       style={{ flex: 1 }}
@@ -604,17 +736,18 @@ function PressableFilter({
   const primary = (theme as any)?.colors?.primary ?? "#2563eb";
 
   return (
-    <View style={{ flex: 1 }}>
-      <Text
-        onPress={onPress}
-        style={[
-          styles.filterBtn,
-          active ? { borderColor: primary, backgroundColor: "#EEF2FF", color: primary } : null,
-        ]}
-      >
+    <Pressable
+      onPress={onPress}
+      style={({ pressed }) => [
+        styles.segItem,
+        active ? { backgroundColor: primary } : null,
+        pressed ? { opacity: 0.92 } : null,
+      ]}
+    >
+      <Text style={[styles.segText, active ? { color: "#fff" } : null]} numberOfLines={1}>
         {label}
       </Text>
-    </View>
+    </Pressable>
   );
 }
 
@@ -635,65 +768,104 @@ const styles = {
       default: {},
     }),
   },
-  heroTitle: { fontSize: 22, fontWeight: "900" as const, color: theme.colors.text, letterSpacing: 0.2 },
-  heroSub: { marginTop: 4, fontSize: 13, fontWeight: "700" as const, color: theme.colors.muted },
-  heroRight: { alignItems: "flex-end" as const, minWidth: 96 },
-  heroTime: { fontSize: 20, fontWeight: "900" as const, color: theme.colors.text },
-  heroDate: {
-    marginTop: 2,
-    fontSize: 12,
-    fontWeight: "800" as const,
-    color: theme.colors.muted,
-    textTransform: "capitalize" as const,
-  },
-  heroAccentBg: {
-    position: "absolute" as const,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    height: 6,
-    backgroundColor: "#f1f5f9",
-  },
-  heroAccent: { height: 6, width: "42%", borderTopRightRadius: 999, borderBottomRightRadius: 999 },
+  heroHello: { fontSize: 22, fontWeight: "900" as const, color: theme.colors.text, letterSpacing: 0.2 },
+  heroSub: { marginTop: 6, fontSize: 13, fontWeight: "700" as const, color: theme.colors.muted },
 
-  statBox: {
+  statsPillsRow: { flexDirection: "row" as const, gap: 10, marginTop: 14 },
+  statCard: {
     flex: 1,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    backgroundColor: "#fff",
-    borderRadius: 14,
-    padding: 10,
-  },
-  statLabel: { color: theme.colors.muted, fontSize: 12, fontWeight: "800" as const },
-  statValue: { marginTop: 6, color: theme.colors.text, fontSize: 18, fontWeight: "900" as const },
-
-  filterBtn: {
-    textAlign: "center" as const,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    borderRadius: 14,
-    paddingVertical: 10,
-    fontWeight: "900" as const,
-    color: theme.colors.text,
-    backgroundColor: "#fff",
-  },
-
-  memberCard: { padding: 12 },
-  memberTopRow: { flexDirection: "row" as const, alignItems: "center" as const, gap: 10 },
-  memberName: { fontWeight: "900" as const, color: theme.colors.text, flex: 1, minWidth: 0 },
-  memberMeta: { color: theme.colors.muted, marginTop: 4, fontSize: 12, fontWeight: "700" as const },
-
-  roleIconBadge: {
-    width: 30,
-    height: 30,
-    borderRadius: 999,
-    borderWidth: 1,
     alignItems: "center" as const,
     justifyContent: "center" as const,
-    flexShrink: 0,
+    borderWidth: 1,
+    borderRadius: 18,
+    paddingVertical: 12,
+    paddingHorizontal: 12,
   },
-  roleIconParent: { backgroundColor: "#EEF2FF", borderColor: "#C7D2FE" },
-  roleIconChild: { backgroundColor: "#F0FDF4", borderColor: "#BBF7D0" },
+  statAvatarWrap: {
+    width: 56,
+    height: 56,
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
+    marginBottom: 6,
+  },
+  statAvatarImg: {
+    width: 56,
+    height: 56,
+  },
+  statCardValue: {
+    fontSize: 18,
+    fontWeight: "900" as const,
+    color: theme.colors.text,
+    marginBottom: 2,
+  },
+  statCardLabel: { fontSize: 12, fontWeight: "600" as const, color: "#6b7280" },
+  statCardValue: { fontSize: 13, fontWeight: "900" as const },
+
+  avatarStack: { flexDirection: "row" as const, alignItems: "center" as const },
+  avatarMiniWrap: {
+    borderWidth: 2,
+    borderColor: "#fff",
+    overflow: "hidden" as const,
+  },
+
+  segmentWrap: {
+    marginTop: 10,
+    flexDirection: "row" as const,
+    gap: 8,
+    borderWidth: 1,
+    borderColor: "#e5e7eb",
+    backgroundColor: "#fff",
+    borderRadius: 18,
+    padding: 6,
+  },
+  segItem: {
+    flex: 1,
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
+    borderRadius: 14,
+    paddingVertical: 10,
+    paddingHorizontal: 10,
+    backgroundColor: "transparent",
+  },
+  segText: { fontSize: 14, fontWeight: "900" as const, color: theme.colors.muted },
+
+  editHint: { marginTop: 10, color: theme.colors.muted, fontSize: 12, fontWeight: "700" as const },
+
+  memberCard: {
+    borderWidth: 1,
+    borderColor: "#e5e7eb",
+    backgroundColor: "#fff",
+    borderRadius: 18,
+    padding: 12,
+    minHeight: 78,
+    overflow: "hidden" as const,
+    ...Platform.select({
+      android: { elevation: 2 },
+      ios: { shadowColor: "#000", shadowOpacity: 0.06, shadowRadius: 12, shadowOffset: { width: 0, height: 4 } },
+      default: {},
+    }),
+  },
+  // Grid: 2 kartice u redu (fiksno, bez "skupljanja" oko avatara)
+  memberCardGrid: { width: "100%" as const },
+  memberCardList: { width: "100%" as const },
+
+  memberRow: { flexDirection: "row" as const, alignItems: "center" as const, gap: 12 },
+
+  avatarWrap: {
+    width: 48,
+    height: 48,
+    borderRadius: 999,
+    overflow: "hidden" as const,
+    backgroundColor: "#fff",
+    borderWidth: 1,
+    borderColor: "#e5e7eb",
+  },
+  avatarImg: { width: "100%", height: "100%" },
+
+  memberName: { fontWeight: "900" as const, color: theme.colors.text, fontSize: 16, lineHeight: 19 },
+  memberRole: { marginTop: 4, color: theme.colors.muted, fontSize: 12, fontWeight: "500" as const, lineHeight: 16 },
+
+
 
   rolePill: {
     flexDirection: "row" as const,
@@ -712,7 +884,7 @@ const styles = {
     marginTop: 10,
     borderWidth: 1,
     borderColor: theme.colors.border,
-    borderRadius: theme.radius.input,
+    borderRadius: (theme as any)?.radius?.input ?? 14,
     paddingHorizontal: 12,
     paddingVertical: 12,
     backgroundColor: "#fff",

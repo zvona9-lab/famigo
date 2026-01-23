@@ -2,6 +2,8 @@
 import React, { useEffect, useMemo, useState } from "react";
 import {
   Alert,
+  Keyboard,
+  KeyboardAvoidingView,
   Platform,
   ScrollView,
   Text,
@@ -27,6 +29,8 @@ import { useLocale } from "../../lib/locale";
 import { useTasks } from "../../lib/tasks";
 import { useAuth } from "../../lib/auth";
 
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+
 import { applyLocale, persistLocale, AppLocale } from "../../lib/i18n";
 import { supabase } from "../../lib/supabase";
 
@@ -47,13 +51,77 @@ function cleanEmail(input: string) {
 }
 
 function BottomSheet(props: { visible: boolean; onClose: () => void; children: React.ReactNode }) {
+  const insets = useSafeAreaInsets();
+
   return (
     <Modal visible={props.visible} transparent animationType="slide" onRequestClose={props.onClose}>
-      <Pressable style={styles.sheetBackdrop} onPress={props.onClose} />
-      <View style={styles.sheetWrap}>
-        <View style={styles.sheetInner}>{props.children}</View>
+      <View style={styles.modalRoot}>
+        <Pressable
+          style={styles.sheetBackdrop}
+          onPress={() => {
+            Keyboard.dismiss();
+            props.onClose();
+          }}
+        />
+
+        <KeyboardAvoidingView
+          // iOS: padding lifts the sheet. Android: height prevents keyboard covering inputs.
+          // In standalone Android builds the window may not resize like Expo Go,
+          // so use padding to lift the sheet reliably.
+          behavior={Platform.OS === "ios" ? "padding" : "padding"}
+          enabled
+          // IMPORTANT: smaller offset => more lift. 80 caused inputs to stay under the keyboard on iPhone.
+          keyboardVerticalOffset={Platform.OS === "ios" ? Math.max(12, insets.top) : 0}
+          style={styles.sheetWrap}
+        >
+          <View style={styles.sheetInner}>
+            <ScrollView
+              keyboardShouldPersistTaps="handled"
+              showsVerticalScrollIndicator={false}
+              contentContainerStyle={{ paddingBottom: 24 }}
+            >
+              {props.children}
+            </ScrollView>
+          </View>
+        </KeyboardAvoidingView>
       </View>
     </Modal>
+  );
+}
+
+function SmallActionButton(props: {
+  title: string;
+  onPress: () => void;
+  variant?: "primary" | "ghost" | "danger";
+  disabled?: boolean;
+}) {
+  const primary = (theme as any)?.colors?.primary ?? "#2563eb";
+  const v = props.variant ?? "primary";
+
+  const bg =
+    v === "primary" ? primary : v === "danger" ? "#ef4444" : "transparent";
+  const border = v === "ghost" ? theme.colors.border : "transparent";
+  const text = v === "primary" || v === "danger" ? "#fff" : theme.colors.text;
+
+  return (
+    <Pressable
+      disabled={props.disabled}
+      onPress={props.onPress}
+      style={({ pressed }) => [
+        {
+          alignSelf: "flex-end",
+          paddingHorizontal: 12,
+          paddingVertical: 8,
+          borderRadius: 12,
+          backgroundColor: bg,
+          borderWidth: v === "ghost" ? 1 : 0,
+          borderColor: border,
+          opacity: props.disabled ? 0.6 : pressed ? 0.85 : 1,
+        },
+      ]}
+    >
+      <Text style={{ color: text, fontWeight: "900", fontSize: 13 }}>{props.title}</Text>
+    </Pressable>
   );
 }
 
@@ -61,16 +129,26 @@ export default function SettingsScreen() {
   const t = getT();
   const { locale, setLocale } = useLocale();
 
-  const {
-    ready: membersReady,
-    inFamily,
-    familyName,
-    familyId,
-    inviteCode,
-    isParent,
-    myMember,
-    refresh: refreshMembers,
-  } = useMembers() as any;
+  const membersCtx = useMembers() as any;
+
+  const membersReady = Boolean(membersCtx?.ready);
+  const inFamily = Boolean(membersCtx?.inFamily);
+  const familyName = membersCtx?.familyName ?? null;
+  const familyId = membersCtx?.familyId ?? null;
+  const inviteCode = membersCtx?.inviteCode ?? null;
+  const isParent = Boolean(membersCtx?.isParent);
+
+  // ✅ compat: older code used myMember/refresh
+  const myMember = membersCtx?.myMember ?? membersCtx?.me ?? null;
+  const refreshMembers = membersCtx?.refresh ?? membersCtx?.refreshMembers ?? (async () => {});
+
+  const joinFamilyWithCode = membersCtx?.joinFamilyWithCode;
+  const leaveFamily = membersCtx?.leaveFamily;
+
+  const createFamily = membersCtx?.createFamily;
+  const deleteFamily = membersCtx?.deleteFamily;
+  const membersList = (membersCtx?.members ?? []) as any[];
+  const canDeleteFamily = Boolean(inFamily && isParent && Array.isArray(membersList) && membersList.length <= 1);
 
   const { refresh: refreshTasks } = useTasks() as any;
 
@@ -85,7 +163,8 @@ export default function SettingsScreen() {
     const v = t?.(key, params);
     if (!v) return fallback;
     if (typeof v === "string" && v.startsWith("[missing")) return fallback;
-    return v as string;
+    if (typeof v !== "string") return fallback;
+    return v;
   }
 
   const version = Application.nativeApplicationVersion ?? Application.applicationVersion ?? "1.0.0";
@@ -95,20 +174,32 @@ export default function SettingsScreen() {
   const [renameDraft, setRenameDraft] = useState("");
   const [nameOpen, setNameOpen] = useState(false);
   const [nameDraft, setNameDraft] = useState("");
+  const [roleDraft, setRoleDraft] = useState<"parent" | "child">("parent");
+  const [genderDraft, setGenderDraft] = useState<"male" | "female">("male");
   const [loginOpen, setLoginOpen] = useState(false);
   const [emailDraft, setEmailDraft] = useState("");
   const [loginBusy, setLoginBusy] = useState(false);
 
+  const [joinOpen, setJoinOpen] = useState(false);
+  const [joinCodeDraft, setJoinCodeDraft] = useState("");
+  const [joinBusy, setJoinBusy] = useState(false);
+
+  const [createOpen, setCreateOpen] = useState(false);
+  const [createDraft, setCreateDraft] = useState("");
+  const [createBusy, setCreateBusy] = useState(false);
+
+  const [inviteShown, setInviteShown] = useState(false);
+
   const localeLabel = useMemo(() => {
     const map: Record<string, string> = {
-      hr: tr("settings.croatian", "Hrvatski"),
+      hr: tr("settings.croatian", "Croatian"),
       en: tr("settings.english", "English"),
-      it: tr("settings.italian", "Italiano"),
-      sl: tr("settings.slovenian", "Slovenščina"),
-      fr: tr("settings.french", "Français"),
-      de: tr("settings.german", "Deutsch"),
-      es: tr("settings.spanish", "Español"),
-      rs: tr("settings.serbian", "Srpski"),
+      it: tr("settings.italian", "Italian"),
+      sl: tr("settings.slovenian", "Slovenian"),
+      fr: tr("settings.french", "French"),
+      de: tr("settings.german", "German"),
+      es: tr("settings.spanish", "Spanish"),
+      rs: tr("settings.serbian", "Serbian"),
     };
     return map[locale] ?? map.en;
   }, [locale, t]);
@@ -126,13 +217,10 @@ export default function SettingsScreen() {
     }
   }
 
-  const familyStatusLine = useMemo(() => {
-    if (!membersReady) return tr("common.loading", "Loading...");
-    if (!inFamily) return tr("settings.family.notInFamily", "You are not in a family.");
-    const name = String(familyName ?? "").trim() || tr("members.familyNameFallback", "My Family");
-    const masked = maskInvite(inviteCode ?? "");
-    return tr("settings.family.statusLine", "Family: {{name}} (Invite: {{code}})", { name, code: masked });
-  }, [membersReady, inFamily, familyName, inviteCode, t]);
+  const inviteDisplay = useMemo(() => {
+    if (!inviteCode) return "—";
+    return inviteShown ? String(inviteCode) : maskInvite(String(inviteCode));
+  }, [inviteCode, inviteShown]);
 
   async function copyInvite() {
     try {
@@ -160,25 +248,146 @@ export default function SettingsScreen() {
     }
   }
 
-  async function doRenameMe() {
-    const newName = String(nameDraft ?? "").trim();
-    if (!newName) {
-      Alert.alert(tr("common.error", "Error"), tr("settings.nameRequired", "Please enter a name."));
+  
+async function doRenameMe() {
+  const newName = String(nameDraft ?? "").trim();
+  if (!newName) {
+    Alert.alert(tr("common.error", "Error"), tr("settings.nameRequired", "Please enter a name."));
+    return;
+  }
+
+  const role = roleDraft;
+  const gender = genderDraft;
+
+  const avatar_key =
+    role === "parent" ? (gender === "female" ? "mom" : "dad") : gender === "female" ? "girl" : "boy";
+
+  try {
+    // 1) Store profile in auth metadata (used by the _layout gate)
+    const { error: metaErr } = await supabase.auth.updateUser({
+      data: { name: newName, role, gender },
+    });
+    if (metaErr) throw metaErr;
+
+    // 2) Best effort: update current family member row (if present)
+    if (inFamily && myMember?.id) {
+      const { data: fmRow, error: fmErr } = await supabase
+        .from("family_members")
+        .update({ display_name: newName, role, gender, avatar_key })
+        .eq("user_id", myMember.id)
+        .select("user_id")
+        .maybeSingle();
+      // If RLS blocks it (or no row updated), we cannot persist gender/role here.
+      if (fmErr || !fmRow) {
+        throw fmErr ?? new Error("Profile was saved to auth metadata, but updating family_members was blocked (no row updated).");
+      }
+    } else {
+      // Not in family yet - still keep old RPC behavior harmlessly (may no-op)
+      await supabase.rpc("rename_me", { new_name: newName });
+    }
+
+    setNameOpen(false);
+    setNameDraft("");
+    Alert.alert(tr("common.ok", "OK"), tr("settings.saved", "Saved."));
+    await refreshMembers?.();
+    await refreshTasks?.();
+  } catch (e: any) {
+    Alert.alert(tr("common.error", "Error"), String(e?.message ?? e));
+  }
+}
+
+async function doJoinFamily() {
+    const code = String(joinCodeDraft ?? "").trim();
+    if (!code) {
+      Alert.alert(tr("common.error", "Error"), tr("settings.joinFamily.invalidCode", "Enter invite code."));
       return;
     }
+    if (joinBusy) return;
 
     try {
-      const { error } = await supabase.rpc("rename_me", { new_name: newName });
-      if (error) throw error;
-
-      setNameOpen(false);
-      setNameDraft("");
-      Alert.alert(tr("common.ok", "OK"), tr("settings.saved", "Saved."));
-      await refreshMembers?.();
-      await refreshTasks?.();
+      setJoinBusy(true);
+      const ok = await (joinFamilyWithCode?.(code) ?? Promise.resolve(false));
+      if (ok) {
+        setJoinOpen(false);
+        setJoinCodeDraft("");
+        Alert.alert(tr("common.success", "Success"), tr("settings.joinFamily.joined", "You are now in the family."));
+      }
     } catch (e: any) {
       Alert.alert(tr("common.error", "Error"), String(e?.message ?? e));
+    } finally {
+      setJoinBusy(false);
     }
+  }
+
+  async function doCreateFamily() {
+    const name = String(createDraft ?? '').trim();
+    if (!name) {
+      Alert.alert(tr('common.error', 'Error'), tr('settings.createFamily.nameRequired', 'Enter a family name.'));
+      return;
+    }
+    if (createBusy) return;
+
+    try {
+      setCreateBusy(true);
+      const ok = await (createFamily?.(name) ?? Promise.resolve(false));
+      if (ok) {
+        setCreateOpen(false);
+        setCreateDraft('');
+        Alert.alert(tr('common.success', 'Success'), tr('settings.createFamily.created', 'Family created.'));
+      }
+    } catch (e: any) {
+      Alert.alert(tr('common.error', 'Error'), String(e?.message ?? e));
+    } finally {
+      setCreateBusy(false);
+    }
+  }
+
+  async function doDeleteFamily() {
+    Alert.alert(
+      tr('settings.deleteFamily.title', 'Delete family'),
+      tr('settings.deleteFamily.body', 'This will delete the family and all its data. This cannot be undone.'),
+      [
+        { text: tr('common.cancel', 'Cancel'), style: 'cancel' },
+        {
+          text: tr('settings.deleteFamily.confirm', 'Delete'),
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              const ok = await (deleteFamily?.() ?? Promise.resolve(false));
+              if (ok) {
+                Alert.alert(tr('common.ok', 'OK'), tr('settings.deleteFamily.deleted', 'Family deleted.'));
+              }
+            } catch (e: any) {
+              Alert.alert(tr('common.error', 'Error'), String(e?.message ?? e));
+            }
+          },
+        },
+      ]
+    );
+  }
+
+  async function doLeaveFamily() {
+    Alert.alert(
+      tr("settings.leaveFamily.title", "Leave family"),
+      tr("settings.leaveFamily.body", "Are you sure you want to leave the family?"),
+      [
+        { text: tr("common.cancel", "Cancel"), style: "cancel" },
+        {
+          text: tr("settings.leaveFamily.confirm", "Leave"),
+          style: "destructive",
+          onPress: async () => {
+            try {
+              const ok = await (leaveFamily?.() ?? Promise.resolve(false));
+              if (ok) {
+                Alert.alert(tr("common.ok", "OK"), tr("settings.leaveFamily.left", "You left the family."));
+              }
+            } catch (e: any) {
+              Alert.alert(tr("common.error", "Error"), String(e?.message ?? e));
+            }
+          },
+        },
+      ]
+    );
   }
 
   async function doLoginMagicLink() {
@@ -224,102 +433,176 @@ export default function SettingsScreen() {
           </View>
 
           <View style={{ paddingHorizontal: 16, width: "100%", alignSelf: "stretch" }}>
-            {/* LANGUAGE */}
-            <SectionTitle title={tr("settings.language", "Language")} />
-            <Card style={{ padding: 12 }}>
-              <Text style={{ color: theme.colors.muted, marginBottom: 10 }}>
-                {tr("settings.languageHint", "Choose the interface language.")}
-              </Text>
-
-              <Button
-                title={tr("settings.btn.changeLanguage", "Change language ({{lang}})", { lang: localeLabel })}
-                variant="ghost"
-                onPress={() => setLangOpen(true)}
-              />
-
-              <Text style={{ color: theme.colors.muted, marginTop: 8, fontSize: 12, fontWeight: "700" }}>
-                {tr("settings.languageNote", "This change applies to the whole app.")}
-              </Text>
-
-              <View style={{ height: 12 }} />
-              <Button
-                title={tr("settings.btn.editName", "Edit name")}
-                variant="ghost"
-                onPress={() => {
-                  setNameDraft(String(myMember?.name ?? "").trim());
-                  setNameOpen(true);
-                }}
-              />
-            </Card>
-
             {/* FAMILY */}
-            <SectionTitle title={tr("settings.family.title", "Family")} style={{ marginTop: theme.spacing.l }} />
+            <SectionTitle title={tr("settings.family.title", "Family")} style={{ marginTop: 0 }} />
 
             <Card style={{ padding: 12 }}>
-              <Text style={{ color: theme.colors.muted, fontWeight: "700" }}>{familyStatusLine}</Text>
+              {/* Setup guidance + My name */}
+
+              {/* If user is NOT in a family yet: show clear next steps */}
+              {!inFamily ? (
+                <View style={styles.setupCallout}>
+                  <Text style={styles.setupTitle}>{tr("settings.setup.title", "Set up your account")}</Text>
+                  <Text style={styles.setupLine}>
+                    {tr("settings.setup.step1", "1) Join or create a family")}
+                  </Text>
+                  <Text style={styles.setupLine}>
+                    {tr("settings.setup.step2", "2) Then set your name in Settings → Family")}
+                  </Text>
+                  <Text style={[styles.setupHint, { marginTop: 6 }]}>
+                    {tr("settings.setup.whyName", "Your name is stored as a family member, so it becomes available after you join a family.")}
+                  </Text>
+                </View>
+              ) : null}
+
+              {/* If user IS in a family but has no name yet: prompt them clearly */}
+              {inFamily && !(String(myMember?.name ?? "").trim().length > 0) ? (
+                <View style={styles.setupCallout}>
+                  <Text style={styles.setupTitle}>{tr("settings.setup.next", "Next step")}</Text>
+                  <Text style={styles.setupLine}>
+                    {tr("settings.setup.setNameNow", "Please set your name so others can recognize you.")}
+                  </Text>
+                  <View style={{ height: 10 }} />
+                  <Button
+                    title={tr("settings.btn.setName", "Set your name")}
+                    onPress={() => {
+                      setNameDraft(String(myMember?.name ?? "").trim());
+                      setRoleDraft((myMember?.role === "child" ? "child" : "parent"));
+                      setGenderDraft((myMember?.gender === "female" ? "female" : "male"));
+                      setNameOpen(true);
+                    }}
+                    style={{ height: 40, borderRadius: 14 }}
+                    textStyle={{ fontSize: 13, fontWeight: "900" }}
+                  />
+                </View>
+              ) : null}
+
+              <View style={{ marginTop: 12 }}>
+                <View style={styles.infoBox}>
+                  <Text style={styles.infoLabel}>{tr("settings.labels.myName", "Your name")}</Text>
+                  <Text style={styles.infoValue}>{String(myMember?.name ?? "").trim() || (inFamily ? tr("settings.notSet", "Not set") : "—")}</Text>
+
+                  {!inFamily ? (
+                    <Text style={styles.infoHint}>
+                      {tr("settings.nameAfterJoin", "Join or create a family to set your name.")}
+                    </Text>
+                  ) : null}
+
+                  <View style={{ height: 8 }} />
+                  <SmallActionButton
+                    title={tr("settings.btn.editName", "Edit name")}
+                    variant="ghost"
+                    disabled={!inFamily}
+                    onPress={() => {
+                      setNameDraft(String(myMember?.name ?? "").trim());
+                      setRoleDraft((myMember?.role === "child" ? "child" : "parent"));
+                      setGenderDraft((myMember?.gender === "female" ? "female" : "male"));
+                      setNameOpen(true);
+                    }}
+                  />
+                </View>
+              </View>
+
 
               {inFamily ? (
                 <>
-                  <View style={{ height: 10 }} />
+                  <View style={{ height: 12 }} />
 
-                  {/* Family name row */}
-                  <View
-                    style={{
-                      borderWidth: 1,
-                      borderColor: theme.colors.border,
-                      borderRadius: theme.radius.input,
-                      padding: 12,
-                      backgroundColor: "#fff",
-                    }}
-                  >
-                    <Text style={{ color: theme.colors.muted, fontSize: 12, fontWeight: "800" }}>
-                      {tr("settings.labels.family", "Family")}
-                    </Text>
-
-                    <Text style={{ color: theme.colors.text, fontSize: 16, fontWeight: "900", marginTop: 6 }}>
+                  {/* Family name */}
+                  <View style={styles.infoBox}>
+                    <Text style={styles.infoLabel}>{tr("settings.labels.family", "Family")}</Text>
+                    <Text style={styles.infoValue}>
                       {String(familyName ?? "").trim() || tr("members.familyNameFallback", "My Family")}
                     </Text>
 
-                    {isParent ? (
-                      <>
-                        <View style={{ height: 12 }} />
-                        <Button
+                    <View style={{ height: 8 }} />
+                    <View style={{ flexDirection: "row", justifyContent: "flex-end", gap: 10 }}>
+                      <SmallActionButton
+                        title={tr("settings.btn.leaveFamily", "Leave family")}
+                        variant="ghost"
+                        onPress={doLeaveFamily}
+                      />
+
+                      {isParent ? (
+                        <SmallActionButton
                           title={tr("settings.btn.renameFamily", "Rename")}
-                          variant="ghost"
                           onPress={() => {
                             setRenameDraft(String(familyName ?? "").trim());
                             setRenameOpen(true);
                           }}
                         />
+                      ) : null}
+                    </View>
+
+                    {canDeleteFamily ? (
+                      <>
+                        <View style={{ height: 8 }} />
+                        <SmallActionButton
+                          title={tr("settings.btn.deleteFamily", "Delete family")}
+                          variant="danger"
+                          onPress={doDeleteFamily}
+                        />
+                        <Text style={styles.helpText}>
+                          {tr(
+                            "settings.deleteFamily.help",
+                            "You can delete the family only when you are the only member."
+                          )}
+                        </Text>
                       </>
                     ) : null}
                   </View>
 
-                  <View style={{ height: 10 }} />
+                  <View style={{ height: 12 }} />
 
                   {/* Invite code */}
-                  <View
-                    style={{
-                      borderWidth: 1,
-                      borderColor: theme.colors.border,
-                      borderRadius: theme.radius.input,
-                      padding: 12,
-                      backgroundColor: "#fff",
-                    }}
-                  >
-                    <Text style={{ color: theme.colors.muted, fontSize: 12, fontWeight: "800" }}>
-                      {tr("settings.labels.inviteCode", "Invite code")}
-                    </Text>
-
-                    <Text style={{ color: theme.colors.text, fontSize: 16, fontWeight: "900", marginTop: 6 }}>
-                      {String(inviteCode ?? "—")}
-                    </Text>
-
-                    <View style={{ height: 12 }} />
-                    <Button title={tr("settings.btn.copy", "Copy")} variant="ghost" onPress={copyInvite} />
+                  <View style={styles.infoBox}>
+                    <Text style={styles.infoLabel}>{tr("settings.labels.inviteCode", "Invite code")}</Text>
+                    <Text style={styles.infoValue}>{inviteDisplay}</Text>
+                    <View style={{ height: 8 }} />
+                    <View style={{ flexDirection: "row", justifyContent: "flex-end", gap: 10 }}>
+                      <SmallActionButton
+                        title={
+                          inviteShown
+                            ? tr("settings.btn.hideInviteCode", "Hide invite code")
+                            : tr("settings.btn.showInviteCode", "Show invite code")
+                        }
+                        variant="ghost"
+                        onPress={() => setInviteShown((s) => !s)}
+                      />
+                      <SmallActionButton title={tr("settings.btn.copy", "Copy")} onPress={copyInvite} />
+                    </View>
                   </View>
                 </>
-              ) : null}
+              ) : (
+                <>
+                  <View style={{ height: 12 }} />
+                  <View style={styles.infoBox}>
+                    <Text style={styles.infoLabel}>{tr("settings.family.notInFamilyTitle", "No family yet")}</Text>
+                    <Text style={styles.helpText}>{tr("settings.family.notInFamily", "You are not in a family.")}</Text>
+                    <View style={{ height: 10 }} />
+                    <SmallActionButton title={tr("settings.btn.createFamily", "Create family")} onPress={() => setCreateOpen(true)} />
+                    <View style={{ height: 10 }} />
+                    <SmallActionButton title={tr("settings.btn.joinFamily", "Join family")} variant="ghost" onPress={() => setJoinOpen(true)} />
+                    <Text style={styles.helpText}>{tr("settings.joinFamily.help", "Enter an invite code from a family member.")}</Text>
+                  </View>
+                </>
+              )}
+            </Card>
+
+            {/* LANGUAGE (moved below Family) */}
+            <SectionTitle title={tr("settings.language", "Language")} style={{ marginTop: theme.spacing.l }} />
+            <Card style={{ padding: 12 }}>
+              <View style={styles.infoBox}>
+                <Text style={styles.infoLabel}>{tr("settings.language", "Language")}</Text>
+                <Text style={styles.infoValue}>{localeLabel}</Text>
+                <Text style={styles.helpText}>{tr("settings.languageNote", "This change applies to the whole app.")}</Text>
+                <View style={{ height: 10 }} />
+                <SmallActionButton
+                  title={tr("settings.btn.changeLanguage", "Change language", { lang: localeLabel })}
+                  variant="ghost"
+                  onPress={() => setLangOpen(true)}
+                />
+              </View>
             </Card>
 
             {/* ACCOUNT */}
@@ -370,14 +653,14 @@ export default function SettingsScreen() {
             </Text>
 
             <View style={{ marginTop: 12, gap: 10 }}>
-              <Button title={tr("settings.croatian", "Hrvatski")} variant={locale === "hr" ? "success" : "ghost"} onPress={() => pickLocale("hr")} />
+              <Button title={tr("settings.croatian", "Croatian")} variant={locale === "hr" ? "success" : "ghost"} onPress={() => pickLocale("hr")} />
               <Button title={tr("settings.english", "English")} variant={locale === "en" ? "success" : "ghost"} onPress={() => pickLocale("en")} />
-              <Button title={tr("settings.italian", "Italiano")} variant={locale === "it" ? "success" : "ghost"} onPress={() => pickLocale("it")} />
-              <Button title={tr("settings.slovenian", "Slovenščina")} variant={locale === "sl" ? "success" : "ghost"} onPress={() => pickLocale("sl")} />
-              <Button title={tr("settings.french", "Français")} variant={locale === "fr" ? "success" : "ghost"} onPress={() => pickLocale("fr")} />
-              <Button title={tr("settings.german", "Deutsch")} variant={locale === "de" ? "success" : "ghost"} onPress={() => pickLocale("de")} />
-              <Button title={tr("settings.spanish", "Español")} variant={locale === "es" ? "success" : "ghost"} onPress={() => pickLocale("es")} />
-              <Button title={tr("settings.serbian", "Srpski")} variant={locale === "rs" ? "success" : "ghost"} onPress={() => pickLocale("rs")} />
+              <Button title={tr("settings.italian", "Italian")} variant={locale === "it" ? "success" : "ghost"} onPress={() => pickLocale("it")} />
+              <Button title={tr("settings.slovenian", "Slovenian")} variant={locale === "sl" ? "success" : "ghost"} onPress={() => pickLocale("sl")} />
+              <Button title={tr("settings.french", "French")} variant={locale === "fr" ? "success" : "ghost"} onPress={() => pickLocale("fr")} />
+              <Button title={tr("settings.german", "German")} variant={locale === "de" ? "success" : "ghost"} onPress={() => pickLocale("de")} />
+              <Button title={tr("settings.spanish", "Spanish")} variant={locale === "es" ? "success" : "ghost"} onPress={() => pickLocale("es")} />
+              <Button title={tr("settings.serbian", "Serbian")} variant={locale === "rs" ? "success" : "ghost"} onPress={() => pickLocale("rs")} />
 
               <Button title={tr("common.cancel", "Cancel")} variant="ghost" onPress={() => setLangOpen(false)} />
             </View>
@@ -412,8 +695,61 @@ export default function SettingsScreen() {
         <BottomSheet visible={nameOpen} onClose={() => setNameOpen(false)}>
           <Card>
             <Text style={{ fontSize: 18, fontWeight: "900", color: theme.colors.text }}>
-              {tr("settings.myName", "My name")}
+              {tr("settings.myProfile", "My profile")}
             </Text>
+
+
+<View style={{ flexDirection: "row", gap: 10, marginTop: 12 }}>
+  <Pressable
+    onPress={() => setRoleDraft("parent")}
+    style={[
+      styles.segPill,
+      roleDraft === "parent" ? styles.segPillOn : styles.segPillOff,
+    ]}
+  >
+    <Text style={roleDraft === "parent" ? styles.segTextOn : styles.segTextOff}>
+      {tr("members.parent", "Parent")}
+    </Text>
+  </Pressable>
+
+  <Pressable
+    onPress={() => setRoleDraft("child")}
+    style={[
+      styles.segPill,
+      roleDraft === "child" ? styles.segPillOn : styles.segPillOff,
+    ]}
+  >
+    <Text style={roleDraft === "child" ? styles.segTextOn : styles.segTextOff}>
+      {tr("members.child", "Child")}
+    </Text>
+  </Pressable>
+</View>
+
+<View style={{ flexDirection: "row", gap: 10, marginTop: 10 }}>
+  <Pressable
+    onPress={() => setGenderDraft("male")}
+    style={[
+      styles.segPill,
+      genderDraft === "male" ? styles.segPillOn : styles.segPillOff,
+    ]}
+  >
+    <Text style={genderDraft === "male" ? styles.segTextOn : styles.segTextOff}>
+      {tr("common.male", "Male")}
+    </Text>
+  </Pressable>
+
+  <Pressable
+    onPress={() => setGenderDraft("female")}
+    style={[
+      styles.segPill,
+      genderDraft === "female" ? styles.segPillOn : styles.segPillOff,
+    ]}
+  >
+    <Text style={genderDraft === "female" ? styles.segTextOn : styles.segTextOff}>
+      {tr("common.female", "Female")}
+    </Text>
+  </Pressable>
+</View>
 
             <TextInput
               value={nameDraft}
@@ -427,6 +763,82 @@ export default function SettingsScreen() {
             <View style={{ flexDirection: "row", gap: 10, marginTop: 12 }}>
               <Button title={tr("common.cancel", "Cancel")} variant="ghost" onPress={() => setNameOpen(false)} style={{ flex: 1 }} />
               <Button title={tr("common.save", "Save")} onPress={doRenameMe} disabled={!String(nameDraft ?? "").trim()} style={{ flex: 1 }} />
+            </View>
+          </Card>
+        </BottomSheet>
+
+        {/* JOIN FAMILY SHEET */}
+
+        <BottomSheet visible={createOpen} onClose={() => setCreateOpen(false)}>
+          <Card>
+            <Text style={{ fontSize: 18, fontWeight: "900", color: theme.colors.text }}>
+              {tr("settings.createFamily.title", "Create family")}
+            </Text>
+
+            <Text style={{ color: theme.colors.muted, marginTop: 6 }}>
+              {tr("settings.createFamily.desc", "Create a new family to start sharing tasks.")}
+            </Text>
+
+            <TextInput
+              value={createDraft}
+              onChangeText={setCreateDraft}
+              placeholder={tr("settings.createFamily.placeholder", "Family name")}
+              placeholderTextColor={theme.colors.muted}
+              autoCapitalize="words"
+              style={[styles.input, { fontSize: 16, fontWeight: "800" }]}
+            />
+
+            <View style={{ flexDirection: "row", gap: 10, marginTop: 12 }}>
+              <Button
+                title={tr("common.cancel", "Cancel")}
+                variant="ghost"
+                onPress={() => setCreateOpen(false)}
+                style={{ flex: 1 }}
+              />
+              <Button
+                title={createBusy ? tr("common.loading", "Loading...") : tr("settings.btn.createFamily", "Create")}
+                onPress={doCreateFamily}
+                disabled={!String(createDraft ?? "").trim() || createBusy}
+                style={{ flex: 1 }}
+              />
+            </View>
+          </Card>
+        </BottomSheet>
+
+        <BottomSheet visible={joinOpen} onClose={() => setJoinOpen(false)}>
+          <Card>
+            <Text style={{ fontSize: 18, fontWeight: "900", color: theme.colors.text }}>
+              {tr("settings.joinFamily.title", "Join family")}
+            </Text>
+
+            <TextInput
+              value={joinCodeDraft}
+              onChangeText={setJoinCodeDraft}
+              placeholder={tr("settings.joinFamily.placeholder", "Invite code")}
+              placeholderTextColor={theme.colors.muted}
+              autoCapitalize="characters"
+              autoCorrect={false}
+              style={[styles.input, { fontSize: 16, fontWeight: "800" }]}
+            />
+
+            <View style={{ height: 14 }} />
+
+            <View style={{ flexDirection: "row", gap: 10 }}>
+              <Button
+                title={tr("common.cancel", "Cancel")}
+                variant="ghost"
+                onPress={() => {
+                  setJoinOpen(false);
+                  setJoinBusy(false);
+                }}
+                style={{ flex: 1 }}
+              />
+              <Button
+                title={joinBusy ? tr("common.loading", "Loading...") : tr("settings.btn.join", "Join")}
+                onPress={doJoinFamily}
+                disabled={!String(joinCodeDraft ?? "").trim() || joinBusy}
+                style={{ flex: 1 }}
+              />
             </View>
           </Card>
         </BottomSheet>
@@ -506,15 +918,75 @@ const styles = StyleSheet.create({
     borderBottomRightRadius: 999,
   },
 
-  sheetBackdrop: {
+  infoBox: {
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    borderRadius: theme.radius.input,
+    padding: 12,
+    backgroundColor: "#fff",
+  },
+  infoLabel: {
+    color: theme.colors.muted,
+    fontSize: 12,
+    fontWeight: "800",
+  },
+  infoValue: {
+    color: theme.colors.text,
+    fontSize: 16,
+    fontWeight: "900",
+    marginTop: 6,
+  },
+  infoHint: {
+    marginTop: 8,
+    color: theme.colors.muted,
+    fontSize: 12,
+    fontWeight: "700",
+  },
+
+  setupCallout: {
+    marginTop: 8,
+    borderWidth: 1,
+    borderColor: "#bfdbfe",
+    backgroundColor: "#eff6ff",
+    borderRadius: 16,
+    padding: 12,
+  },
+  setupTitle: {
+    color: theme.colors.text,
+    fontSize: 14,
+    fontWeight: "900",
+    marginBottom: 6,
+  },
+  setupLine: {
+    color: theme.colors.text,
+    fontSize: 13,
+    fontWeight: "800",
+    marginTop: 2,
+  },
+  setupHint: {
+    color: theme.colors.muted,
+    fontSize: 12,
+    fontWeight: "700",
+  },
+  helpText: {
+    color: theme.colors.muted,
+    marginTop: 8,
+    fontSize: 12,
+    fontWeight: "700",
+  },
+
+  modalRoot: {
     flex: 1,
+    justifyContent: "flex-end",
+  },
+
+  sheetBackdrop: {
+    ...StyleSheet.absoluteFillObject,
     backgroundColor: "rgba(0,0,0,0.35)",
   },
   sheetWrap: {
-    position: "absolute",
-    left: 0,
-    right: 0,
-    bottom: 0,
+    flex: 1,
+    justifyContent: "flex-end",
     padding: 14,
   },
   sheetInner: {
@@ -530,4 +1002,29 @@ const styles = StyleSheet.create({
     backgroundColor: "#fff",
     color: theme.colors.text,
   },
+
+segPill: {
+  flex: 1,
+  paddingVertical: 10,
+  borderRadius: 16,
+  alignItems: "center",
+  justifyContent: "center",
+  borderWidth: 1,
+},
+segPillOn: {
+  backgroundColor: theme.colors.primary,
+  borderColor: theme.colors.primary,
+},
+segPillOff: {
+  backgroundColor: "#fff",
+  borderColor: theme.colors.border,
+},
+segTextOn: {
+  color: "#fff",
+  fontWeight: "900",
+},
+segTextOff: {
+  color: theme.colors.text,
+  fontWeight: "900",
+},
 });

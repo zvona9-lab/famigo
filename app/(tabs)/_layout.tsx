@@ -1,4 +1,4 @@
-// /app/(tabs)/_layout.tsx
+// app/(tabs)/_layout.tsx
 import React, { useMemo } from "react";
 import { Tabs } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -34,7 +34,7 @@ export default function TabsLayout() {
   // ✅ translations
   const t = getT();
   function tr(key: string, fallback: string) {
-    const v = t?.(key);
+    const v = t?.(key, fallback);
     if (!v) return fallback;
     if (typeof v === "string" && v.startsWith("[missing")) return fallback;
     return v as string;
@@ -60,28 +60,23 @@ export default function TabsLayout() {
   return (
     <Tabs
       key={locale}
+      initialRouteName="home"
       screenOptions={{
         headerShown: false,
         tabBarHideOnKeyboard: true,
 
-        // ✅ bolja čitljivost na tamnoj traci
         tabBarActiveTintColor: "#ffffff",
         tabBarInactiveTintColor: "rgba(255,255,255,0.65)",
 
         tabBarStyle: {
           backgroundColor: TAB_BG,
-
-          // ✅ jasna separacija od contenta
           borderTopColor: "rgba(255,255,255,0.10)",
           borderTopWidth: 1,
-
-          // ✅ “lift” efekt (iOS shadow + Android elevation)
           shadowColor: "#000",
           shadowOpacity: 0.18,
           shadowRadius: 14,
           shadowOffset: { width: 0, height: -6 },
           elevation: 18,
-
           height: baseHeight + insets.bottom,
           paddingTop: 8,
           paddingBottom: bottomPad + insets.bottom,
@@ -115,11 +110,7 @@ export default function TabsLayout() {
         options={{
           title: tr("tabs.members", "Members"),
           tabBarIcon: ({ color, focused }) => (
-            <TabIcon
-              name={focused ? "people" : "people-outline"}
-              color={color}
-              focused={focused}
-            />
+            <TabIcon name={focused ? "people" : "people-outline"} color={color} focused={focused} />
           ),
         }}
       />
@@ -139,17 +130,12 @@ export default function TabsLayout() {
         }}
       />
 
-      {/* ✅ NEW: Shopping */}
       <Tabs.Screen
         name="shopping"
         options={{
           title: tr("tabs.shopping", "Shopping"),
           tabBarIcon: ({ color, focused }) => (
-            <TabIcon
-              name={focused ? "cart" : "cart-outline"}
-              color={color}
-              focused={focused}
-            />
+            <TabIcon name={focused ? "cart" : "cart-outline"} color={color} focused={focused} />
           ),
         }}
       />
@@ -167,9 +153,6 @@ export default function TabsLayout() {
           ),
         }}
       />
-
-      <Tabs.Screen name="index" options={{ href: null }} />
-      <Tabs.Screen name="explore" options={{ href: null }} />
     </Tabs>
   );
 }

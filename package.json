@@ -5,12 +5,13 @@
   "scripts": {
     "start": "expo start",
     "reset-project": "node ./scripts/reset-project.js",
-    "android": "expo start --android",
-    "ios": "expo start --ios",
+    "android": "expo run:android",
+    "ios": "expo run:ios",
     "web": "expo start --web",
     "lint": "expo lint"
   },
   "dependencies": {
+    "@expo-google-fonts/nunito": "^0.4.2",
     "@expo/vector-icons": "^15.0.3",
     "@react-native-async-storage/async-storage": "2.2.0",
     "@react-native-community/datetimepicker": "8.4.4",
@@ -21,6 +22,7 @@
     "@supabase/supabase-js": "^2.89.0",
     "expo": "~54.0.30",
     "expo-application": "~7.0.8",
+    "expo-auth-session": "~7.0.10",
     "expo-barcode-generator": "^4.0.0",
     "expo-camera": "~17.0.10",
     "expo-clipboard": "~8.0.8",
@@ -40,6 +42,7 @@
     "expo-status-bar": "~3.0.9",
     "expo-symbols": "~1.0.8",
     "expo-system-ui": "~6.0.9",
+    "expo-updates": "~29.0.16",
     "expo-web-browser": "~15.0.10",
     "i18n-js": "^4.5.1",
     "react": "19.1.0",
@@ -58,7 +61,7 @@
     "@types/react": "~19.1.0",
     "eslint": "^9.25.0",
     "eslint-config-expo": "~10.0.0",
-    "supabase": "^2.72.4",
+    "supabase": "^2.72.8",
     "typescript": "~5.9.2"
   },
   "private": true

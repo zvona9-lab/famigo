@@ -103,6 +103,64 @@ export async function deleteShoppingItem(id: string) {
 }
 
 /**
+ * ✅ Send the current shopping list as ONE push notification (manual action).
+ * This avoids spamming everyone for each item.
+ *
+ * Requires that authenticated users can INSERT into `notification_queue`
+ * OR that you have an allowlist policy for this action.
+ */
+export async function sendShoppingList(args: {
+  familyId: string;
+  toUserId: string;
+  items: Array<{ title: string }>;
+  fromName?: string | null;
+}) {
+  const { data: s, error: sessErr } = await supabase.auth.getSession();
+  if (sessErr) throw sessErr;
+
+  const fromUserId = s.session?.user?.id;
+  if (!fromUserId) throw new Error("Not signed in");
+
+  const toUserId = String(args.toUserId ?? "");
+  if (!toUserId) throw new Error("Missing recipient");
+
+  const rawTitles = (args.items ?? [])
+    .map((x) => cleanTitle(String((x as any)?.title ?? "")))
+    .filter(Boolean);
+
+  if (!rawTitles.length) throw new Error("Shopping list is empty");
+
+  const max = 8;
+  const head = rawTitles.slice(0, max);
+  const more = rawTitles.length - head.length;
+
+  const body = more > 0 ? `${head.join(", ")} +${more} more` : head.join(", ");
+
+  const payload = {
+    kind: "shopping_list",
+    from_user_id: fromUserId,
+    from_name: args.fromName ?? null,
+    titles: rawTitles,
+    body,
+  };
+
+  // NOTE: task_id is optional for non-task notifications (set to null).
+  const row: any = {
+    type: "shopping_list_sent",
+    user_id: toUserId,
+    family_id: args.familyId,
+    task_id: fromUserId,
+    payload,
+    processed: false,
+  };
+
+  const { data, error } = await supabase.from("notification_queue").insert(row).select("*").single();
+  if (error) throw error;
+  return data;
+}
+
+
+/**
  * Hook:
  * - auto refresh
  * - realtime refresh on changes (same family_id)
