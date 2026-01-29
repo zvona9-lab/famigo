@@ -28,10 +28,9 @@ function getT() {
 export default function TabsLayout() {
   const insets = useSafeAreaInsets();
 
-  // ✅ re-render / remount Tabs kad se promijeni jezik
+  // re-render Tabs when language changes
   const { locale } = useLocale();
 
-  // ✅ translations
   const t = getT();
   function tr(key: string, fallback: string) {
     const v = t?.(key, fallback);
@@ -40,12 +39,16 @@ export default function TabsLayout() {
     return v as string;
   }
 
-  // ✅ badge count
+  // badge for active tasks
   const { tasks } = useTasks() as any;
 
   const openCount = useMemo(() => {
-    const list = (tasks ?? []) as Array<{ done?: boolean }>;
-    const n = list.filter((x) => !x.done).length;
+    const list = (tasks ?? []) as Array<{ status?: string; done?: boolean }>;
+    const n = list.filter((x) => {
+      if (typeof x.status === "string") return x.status !== "done";
+      return !x.done;
+    }).length;
+
     if (n <= 0) return 0;
     if (n > 99) return 99;
     return n;
@@ -54,8 +57,7 @@ export default function TabsLayout() {
   const baseHeight = 62;
   const bottomPad = 10;
 
-  // ✅ “premium” tab bar look
-  const TAB_BG = "#111111"; // tamno, da se odvoji od contenta
+  const TAB_BG = "#111111";
 
   return (
     <Tabs
@@ -106,11 +108,15 @@ export default function TabsLayout() {
       />
 
       <Tabs.Screen
-        name="members"
+        name="planner"
         options={{
-          title: tr("tabs.members", "Members"),
+          title: tr("tabs.planner", "Planner"),
           tabBarIcon: ({ color, focused }) => (
-            <TabIcon name={focused ? "people" : "people-outline"} color={color} focused={focused} />
+            <TabIcon
+              name={focused ? "calendar" : "calendar-outline"}
+              color={color}
+              focused={focused}
+            />
           ),
         }}
       />
@@ -141,6 +147,16 @@ export default function TabsLayout() {
       />
 
       <Tabs.Screen
+        name="members"
+        options={{
+          title: tr("tabs.members", "Members"),
+          tabBarIcon: ({ color, focused }) => (
+            <TabIcon name={focused ? "people" : "people-outline"} color={color} focused={focused} />
+          ),
+        }}
+      />
+
+      <Tabs.Screen
         name="settings"
         options={{
           title: tr("tabs.settings", "Settings"),
@@ -153,6 +169,7 @@ export default function TabsLayout() {
           ),
         }}
       />
+
     </Tabs>
   );
 }

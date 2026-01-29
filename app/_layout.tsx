@@ -1,10 +1,11 @@
 import "react-native-gesture-handler";
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { ActivityIndicator, LogBox, View } from "react-native";
+import { ActivityIndicator, LogBox, Platform, View } from "react-native";
 import { Stack, useRouter, useSegments } from "expo-router";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import * as Linking from "expo-linking";
-import Constants from "expo-constants";
+
+import { useFonts, Nunito_500Medium, Nunito_600SemiBold, Nunito_800ExtraBold } from "@expo-google-fonts/nunito";
 
 import { LocaleProvider, useLocale } from "../lib/locale";
 import { AuthProvider } from "../lib/auth";
@@ -16,14 +17,13 @@ import { registerForPushAndSaveToken } from "../lib/push";
 /**
  * Root layout (stable gate)
  * ------------------------
- * Fixes the case where Expo Go / dev restores last navigation state (e.g. /(tabs)/home),
- * even for a brand new user who is NOT in a family.
+ * Ensures correct first screen after login:
+ * - no session -> /(auth)
+ * - has session but no profile name -> /onboarding/profile
+ * - has session + profile but not in family -> /onboarding/family
+ * - has session + profile + in family -> /(tabs)/home
  *
- * Key ideas:
- * - Always route to a CONCRETE screen (/(tabs)/home), never just /(tabs)
- * - De-dupe replace() calls
- * - Also check current segments so we don't loop
- * - No expo-navigation-bar calls (they spam warnings in Expo Go with edge-to-edge)
+ * Also normalizes host-based deep links like: famigo://auth-callback?code=...
  */
 
 function Loader() {
@@ -46,6 +46,7 @@ function DeepLinkNormalizer() {
         const host = (parsed.hostname || "").toLowerCase();
         const path = (parsed.path || "").toLowerCase();
 
+        // Convert famigo://auth-callback?... to /(auth)/auth-callback?...
         if ((host === "auth-callback" || host === "reset-password") && !path) {
           const qp = parsed.queryParams || {};
           const qs = Object.keys(qp).length
@@ -56,7 +57,9 @@ function DeepLinkNormalizer() {
             : "";
           router.replace(`/(auth)/${host}${qs}`);
         }
-      } catch {}
+      } catch {
+        // ignore
+      }
     };
 
     const sub: any = (Linking as any).addEventListener?.("url", handler);
@@ -72,45 +75,107 @@ function DeepLinkNormalizer() {
 function NavigationGate({ hasSession }: { hasSession: boolean }) {
   const router = useRouter();
   const segments = useSegments();
-  const { ready: membersReady, me, inFamily } = useMembers();
+  const { ready: membersReady, inFamily } = useMembers() as any;
+
+  const [metaReady, setMetaReady] = useState(false);
+  const [profileMeta, setProfileMeta] = useState<{ name: string; role: string; gender: string; avatarKey: string } | null>(null);
 
   // Current route like "/(tabs)/home"
   const currentPath = useMemo(() => "/" + segments.join("/"), [segments]);
-
   const lastTargetRef = useRef<string | null>(null);
 
-  const go = (target: string) => {
-    if (currentPath === target) return;
-    if (lastTargetRef.current === target) return;
-    lastTargetRef.current = target;
+  const go = (target: any) => {
+    const targetPath = typeof target === "string" ? target : String(target?.pathname ?? "");
+    if (targetPath && currentPath === targetPath) return;
+    if (lastTargetRef.current === JSON.stringify(target)) return;
+    lastTargetRef.current = JSON.stringify(target);
     router.replace(target);
   };
 
+  // Load auth metadata (name/role/gender) after login so we can decide onboarding.
   useEffect(() => {
+    let alive = true;
+
+    if (!hasSession) {
+      setMetaReady(false);
+      setProfileMeta(null);
+      return;
+    }
+
+    setMetaReady(false);
+    supabase.auth
+      .getUser()
+      .then(({ data, error }) => {
+        if (!alive) return;
+        if (error) throw error;
+
+        const u: any = data?.user;
+        const md: any = u?.user_metadata || {};
+        const name = String(md?.name ?? "").trim();
+        const role = String(md?.role ?? "parent");
+        const gender = String(md?.gender ?? "male");
+        const avatarKey =
+          role === "parent" ? (gender === "female" ? "mom" : "dad") : gender === "female" ? "girl" : "boy";
+
+        setProfileMeta({ name, role, gender, avatarKey });
+        setMetaReady(true);
+      })
+      .catch(() => {
+        if (!alive) return;
+        setProfileMeta({ name: "", role: "parent", gender: "male", avatarKey: "dad" });
+        setMetaReady(true);
+      });
+
+    return () => {
+      alive = false;
+    };
+  }, [hasSession]);
+
+  useEffect(() => {
+    // 1) Not signed in
     if (!hasSession) {
       go("/(auth)");
       return;
     }
 
-    if (!membersReady) return;
+    // 2) Wait for providers
+    if (!membersReady || !metaReady) return;
 
-    if (!me) {
+    // 3) Need profile?
+    const hasName = !!String(profileMeta?.name ?? "").trim();
+    if (!hasName) {
       go("/onboarding/profile");
       return;
     }
 
+    // 4) Need family?
     if (!inFamily) {
-      go("/onboarding/family");
+      go({
+        pathname: "/onboarding/family",
+        params: {
+          name: profileMeta?.name ?? "",
+          role: profileMeta?.role ?? "parent",
+          gender: profileMeta?.gender ?? "male",
+          avatarKey: profileMeta?.avatarKey ?? "",
+        },
+      });
       return;
     }
 
+    // 5) Ready -> Home
     go("/(tabs)/home");
-  }, [hasSession, membersReady, me, inFamily, currentPath]);
+  }, [hasSession, membersReady, metaReady, profileMeta, inFamily, currentPath]);
 
   return null;
 }
 
 function AppShell() {
+  const [fontsLoaded] = useFonts({
+    Nunito_500Medium,
+    Nunito_600SemiBold,
+    Nunito_800ExtraBold,
+  });
+
   const { ready: localeReady } = useLocale();
 
   const [sessionReady, setSessionReady] = useState(false);
@@ -124,7 +189,7 @@ function AppShell() {
     ]);
   }, []);
 
-  // Exchange session if opened from email link
+  // Exchange session if opened from email link (famigo://...)
   useEffect(() => {
     const handleUrl = async (url?: string | null) => {
       if (!url) return;
@@ -172,33 +237,26 @@ function AppShell() {
     };
   }, []);
 
-  // Push (skip in Expo Go)
+  // Push token
   useEffect(() => {
     if (!sessionReady || !hasSession) return;
-    const isExpoGo = Constants.appOwnership === "expo";
-    if (isExpoGo) return;
-
-    try {
-      registerForPushAndSaveToken();
-    } catch (e) {
-      console.log("[push] error (ignored):", e);
-    }
+    registerForPushAndSaveToken();
   }, [sessionReady, hasSession]);
 
-  if (!sessionReady || !localeReady) {
-    return <Loader />;
-  }
+  // Optional: Android nav bar (best effort)
+  useEffect(() => {
+    if (Platform.OS !== "android") return;
+    // Keep empty: expo-navigation-bar calls often warn in Expo Go with edge-to-edge.
+  }, []);
+
+  if (!fontsLoaded || !localeReady || !sessionReady) return <Loader />;
 
   return (
-    <AuthProvider>
-      <MembersProvider>
-        <TasksProvider>
-          <DeepLinkNormalizer />
-          <NavigationGate hasSession={hasSession} />
-          <Stack screenOptions={{ headerShown: false }} />
-        </TasksProvider>
-      </MembersProvider>
-    </AuthProvider>
+    <>
+      <DeepLinkNormalizer />
+      <NavigationGate hasSession={hasSession} />
+      <Stack screenOptions={{ headerShown: false }} />
+    </>
   );
 }
 
@@ -206,7 +264,13 @@ export default function RootLayout() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <LocaleProvider>
-        <AppShell />
+        <AuthProvider>
+          <MembersProvider>
+            <TasksProvider>
+              <AppShell />
+            </TasksProvider>
+          </MembersProvider>
+        </AuthProvider>
       </LocaleProvider>
     </GestureHandlerRootView>
   );

@@ -2,35 +2,23 @@
 import React, { createContext, useContext, useEffect, useMemo, useState, ReactNode } from "react";
 
 /**
- * NOTE
- * ----
- * This file is intentionally self-contained and conservative.
- * It implements the simplified Famigo task workflow:
+ * Simplified Famigo workflow (as requested):
  *
- * - Statuses: "open" | "done"
- * - Accept:
- *    - if reminderOffsetMinutes is set (15/30/60) -> accept = "preuzeo sam" (acceptedAt set, stays OPEN)
- *    - if reminderOffsetMinutes is null -> accept = DONE immediately
- * - Reject:
- *    - unassign (assignedToId/name -> null) + acceptedAt null, stays OPEN
+ * - User actions:
+ *    1) "Označi gotovo"  -> status = "done"
+ *    2) "Odbij"          -> task becomes available for others (assigned_to_id/name -> NULL), status stays "open"
  *
- * It does NOT depend on any push-notification helper imports, to avoid build breaks.
- * (You can later add push notifications server-side / in edge functions.)
+ * - We keep the existing function names for compatibility:
+ *    - acceptTask(id) now behaves as "Označi gotovo" (DONE)
+ *      (so old UI that still calls acceptTask won't break)
+ *
+ * - Reject uses an RPC because it must set assigned_to_id = NULL (RLS-safe).
+ * - Done can be done either via direct update (if your RLS already allows it) or via RPC.
+ *   Here we use RPC for consistency and to avoid silent RLS issues.
  */
 
-/**
- * Adjust this import path ONLY if your supabase client lives elsewhere.
- * Common alternatives:
- *   - import { supabase } from "./supabase";
- *   - import { supabase } from "../lib/supabase";
- */
 import { supabase } from "./supabase";
 
-/**
- * Optional: if you already have useMembers and a familyId, we can filter by it.
- * If this import path doesn't exist in your project, you can safely remove these
- * few lines and the family filtering (search for "familyId").
- */
 let useMembers: any = null;
 try {
   // eslint-disable-next-line @typescript-eslint/no-var-requires
@@ -40,40 +28,29 @@ try {
 }
 
 export type TaskStatus = "open" | "done";
-
 export type ReminderOffset = 15 | 30 | 60;
 
 export type Task = {
   id: string;
-
   title: string;
   status: TaskStatus;
 
-  // timestamps are stored as epoch ms in the app layer
   createdAt?: number | null;
   dueAt?: number | null;
   completedAt?: number | null;
 
-  // assignee is an auth user id in this implementation
   assignedToId?: string | null;
   assignedToName?: string | null;
 
-  // who created the task (auth user id)
   createdById?: string | null;
 
-  // accept tracking
   acceptedAt?: number | null;
 
-  // reminders
   reminderOffsetMinutes?: ReminderOffset | null;
-
-  // repeat (kept for compatibility with your existing UI)
   repeatRule?: string | null;
-
-  // optional: familyId if your schema supports it
   familyId?: string | null;
 
-  // legacy fields (kept optional to avoid breaking older UI)
+  // legacy
   claimedById?: string | null;
   claimedByName?: string | null;
 };
@@ -99,16 +76,26 @@ type TasksContextValue = {
   tasks: Task[];
   refresh: () => Promise<void>;
 
-  addTask: (title: string, opts?: Partial<{ dueAt: number | null; repeatRule: string | null; reminderOffsetMinutes: ReminderOffset | null; assignedToId: string | null; assignedToName: string | null }>) => Promise<void>;
+  addTask: (
+    title: string,
+    opts?: Partial<{
+      dueAt: number | null;
+      repeatRule: string | null;
+      reminderOffsetMinutes: ReminderOffset | null;
+      assignedToId: string | null;
+      assignedToName: string | null;
+    }>
+  ) => Promise<void>;
   updateTask: (id: string, patch: TaskPatch) => Promise<void>;
   deleteTask: (id: string) => Promise<void>;
 
   setAssignee: (id: string, assignedToId: string | null, assignedToName: string | null) => Promise<void>;
 
+  // Compatibility: acceptTask == mark done
   acceptTask: (id: string) => Promise<void>;
   rejectTask: (id: string) => Promise<void>;
 
-  // legacy exports (optional): kept so other screens don't explode if they still import these
+  // legacy exports
   claimTask?: (id: string, claimerId: string, claimerName: string) => Promise<void>;
   unclaimTask?: (id: string) => Promise<void>;
   requestDone?: (id: string, memberId: string, memberName: string) => Promise<void>;
@@ -146,7 +133,6 @@ function mapRow(row: any): Task {
     assignedToName: row.assigned_to_name ?? null,
 
     createdById: row.created_by ?? null,
-
     acceptedAt: msFromIso(row.accepted_at),
 
     reminderOffsetMinutes: normalizeReminder(row.reminder_offset_minutes),
@@ -154,7 +140,6 @@ function mapRow(row: any): Task {
     repeatRule: row.repeat_rule ?? null,
     familyId: row.family_id ?? null,
 
-    // legacy (optional)
     claimedById: row.claimed_by_id ?? null,
     claimedByName: row.claimed_by_name ?? null,
   };
@@ -189,12 +174,7 @@ export function TasksProvider(props: { children: ReactNode }) {
   const [refreshNonce, setRefreshNonce] = useState(0);
 
   async function refresh() {
-    // If your schema has family_id, we filter by it. If not, we simply load all tasks visible to the user via RLS.
-    let q = supabase
-      .from("tasks")
-      .select("*")
-      .order("created_at", { ascending: false });
-
+    let q = supabase.from("tasks").select("*").order("created_at", { ascending: false });
     if (familyId) q = q.eq("family_id", familyId);
 
     const { data, error } = await q;
@@ -256,7 +236,9 @@ export function TasksProvider(props: { children: ReactNode }) {
       .update({
         assigned_to_id: assignedToId,
         assigned_to_name: assignedToName,
-        accepted_at: null, // changing assignee clears acceptance
+        accepted_at: null,
+        completed_at: null,
+        status: "open",
       })
       .eq("id", id);
 
@@ -265,9 +247,10 @@ export function TasksProvider(props: { children: ReactNode }) {
   };
 
   /**
-   * ACCEPT (new simplified workflow)
-   * - if reminder is OFF (null) => DONE immediately
-   * - if reminder is set => accepted_at set, stays OPEN (auto-close handled server-side at dueAt if accepted)
+   * "Označi gotovo"
+   * Implemented as RPC for consistency (and to avoid silent RLS failures).
+   *
+   * RPC: complete_task(p_task_id uuid)
    */
   const acceptTask: TasksContextValue["acceptTask"] = async (id) => {
     const local = tasks.find((t) => t.id === id);
@@ -279,33 +262,16 @@ export function TasksProvider(props: { children: ReactNode }) {
       throw new Error("Not allowed");
     }
 
-    const nowIso = new Date().toISOString();
-    const hasReminder = local.reminderOffsetMinutes === 15 || local.reminderOffsetMinutes === 30 || local.reminderOffsetMinutes === 60;
-
-    if (!hasReminder) {
-      const { error } = await supabase
-        .from("tasks")
-        .update({ status: "done", completed_at: nowIso, accepted_at: nowIso })
-        .eq("id", id)
-        .eq("assigned_to_id", uid);
-
-      if (error) throw error;
-    } else {
-      const { error } = await supabase
-        .from("tasks")
-        .update({ status: "open", accepted_at: nowIso })
-        .eq("id", id)
-        .eq("assigned_to_id", uid);
-
-      if (error) throw error;
-    }
+    const { error } = await supabase.rpc("complete_task", { p_task_id: id });
+    if (error) throw error;
 
     setRefreshNonce((x) => x + 1);
   };
 
   /**
-   * REJECT
-   * - unassign + clear accepted_at, stays OPEN
+   * "Odbij" -> free task for others
+   *
+   * RPC: reject_task(p_task_id uuid)
    */
   const rejectTask: TasksContextValue["rejectTask"] = async (id) => {
     const local = tasks.find((t) => t.id === id);
@@ -317,46 +283,30 @@ export function TasksProvider(props: { children: ReactNode }) {
       throw new Error("Not allowed");
     }
 
-    const { error } = await supabase
-      .from("tasks")
-      .update({
-        status: "open",
-        assigned_to_id: null,
-        assigned_to_name: null,
-        accepted_at: null,
-        completed_at: null,
-      })
-      .eq("id", id)
-      .eq("assigned_to_id", uid);
-
+    const { error } = await supabase.rpc("reject_task", { p_task_id: id });
     if (error) throw error;
+
     setRefreshNonce((x) => x + 1);
   };
 
-  // Legacy wrappers (optional): keep old calls from older UI from crashing
+  // Legacy wrappers
   const claimTask: TasksContextValue["claimTask"] = async (id, claimerId, claimerName) => {
-    // Legacy: we treat "claim" as "set assignee to myself"
     await setAssignee(id, claimerId, claimerName);
   };
   const unclaimTask: TasksContextValue["unclaimTask"] = async (id) => {
-    // Legacy: unassign
     await setAssignee(id, null, null);
   };
   const requestDone: TasksContextValue["requestDone"] = async (id) => {
-    // Legacy: mark done immediately
-    await updateTask(id, { status: "done", completedAt: Date.now() });
+    await acceptTask(id);
   };
   const approveDone: TasksContextValue["approveDone"] = async () => {
-    // No-op in simplified flow
     return;
   };
   const rejectDone: TasksContextValue["rejectDone"] = async () => {
-    // No-op in simplified flow
     return;
   };
   const completeAuto: TasksContextValue["completeAuto"] = async (id) => {
-    // Legacy: done
-    await updateTask(id, { status: "done", completedAt: Date.now() });
+    await acceptTask(id);
   };
 
   const value = useMemo<TasksContextValue>(

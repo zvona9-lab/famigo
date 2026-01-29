@@ -2,6 +2,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import {
   Alert,
+  Image,
   Keyboard,
   KeyboardAvoidingView,
   Platform,
@@ -16,12 +17,17 @@ import {
 
 import * as Application from "expo-application";
 import * as Clipboard from "expo-clipboard";
+import Constants from "expo-constants";
+
+const SETTINGS_HEADER_IMG = require("../../assets/avatars/stats/header-settings.png");
 
 import { Screen } from "../../src/ui/components/Screen";
 import { Card } from "../../src/ui/components/Card";
 import { Button } from "../../src/ui/components/Button";
 import { SectionTitle } from "../../src/ui/components/SectionTitle";
 import { theme } from "../../src/ui/theme";
+
+import { FONT, LETTER_SPACING } from "../../lib/typography";
 
 import { useT } from "../../lib/useT";
 import { useMembers } from "../../lib/members";
@@ -120,10 +126,35 @@ function SmallActionButton(props: {
         },
       ]}
     >
-      <Text style={{ color: text, fontWeight: "900", fontSize: 13 }}>{props.title}</Text>
+      <Text style={{ color: text, fontWeight: "900", fontSize: 13, fontFamily: FONT.body, letterSpacing: LETTER_SPACING.body }}>{props.title}</Text>
     </Pressable>
   );
 }
+
+
+
+function DestructiveButton(props: { title: string; onPress: () => void; disabled?: boolean }) {
+  return (
+    <Pressable
+      disabled={props.disabled}
+      onPress={props.onPress}
+      style={({ pressed }) => [
+        {
+          width: "100%",
+          height: 44,
+          borderRadius: 14,
+          alignItems: "center",
+          justifyContent: "center",
+          backgroundColor: "#ef4444",
+          opacity: props.disabled ? 0.6 : pressed ? 0.85 : 1,
+        },
+      ]}
+    >
+      <Text style={{ color: "#fff", fontWeight: "900", fontSize: 14, fontFamily: FONT.body, letterSpacing: LETTER_SPACING.body }}>{props.title}</Text>
+    </Pressable>
+  );
+}
+
 
 export default function SettingsScreen() {
   const t = getT();
@@ -167,7 +198,10 @@ export default function SettingsScreen() {
     return v;
   }
 
-  const version = Application.nativeApplicationVersion ?? Application.applicationVersion ?? "1.0.0";
+  const version = Application.nativeApplicationVersion ??
+    (Constants.expoConfig as any)?.version ??
+    (Constants.manifest as any)?.version ??
+    "—";
 
   const [langOpen, setLangOpen] = useState(false);
   const [renameOpen, setRenameOpen] = useState(false);
@@ -179,6 +213,8 @@ export default function SettingsScreen() {
   const [loginOpen, setLoginOpen] = useState(false);
   const [emailDraft, setEmailDraft] = useState("");
   const [loginBusy, setLoginBusy] = useState(false);
+
+  const [deleteBusy, setDeleteBusy] = useState(false);
 
   const [joinOpen, setJoinOpen] = useState(false);
   const [joinCodeDraft, setJoinCodeDraft] = useState("");
@@ -410,6 +446,41 @@ async function doJoinFamily() {
     }
   }
 
+  async function doDeleteAccount() {
+    if (!isSignedIn || deleteBusy) return;
+
+    Alert.alert(
+      "Delete account",
+      "This will permanently delete your account. If you are the only member of your family, the family will be deleted too. This action cannot be undone.",
+      [
+        { text: tr("common.cancel", "Cancel"), style: "cancel" },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              setDeleteBusy(true);
+
+              // Server-side deletion (SECURITY DEFINER function) – required for App Store Guideline 5.1.1(v)
+              const { error } = await supabase.rpc("delete_my_account");
+              if (error) throw error;
+
+              // Ensure local session is cleared
+              await signOut?.();
+
+              Alert.alert(tr("common.ok", "OK"), "Account deleted.");
+            } catch (e: any) {
+              Alert.alert(tr("common.error", "Error"), String(e?.message ?? e));
+            } finally {
+              setDeleteBusy(false);
+            }
+          },
+        },
+      ]
+    );
+  }
+
+
   const primary = (theme as any)?.colors?.primary ?? "#2563eb";
 
   return (
@@ -430,6 +501,8 @@ async function doJoinFamily() {
                 <View style={[styles.heroAccent, { backgroundColor: primary }]} />
               </View>
             </View>
+
+            <Image source={SETTINGS_HEADER_IMG} style={styles.heroArt} resizeMode="contain" />
           </View>
 
           <View style={{ paddingHorizontal: 16, width: "100%", alignSelf: "stretch" }}>
@@ -609,19 +682,32 @@ async function doJoinFamily() {
             <SectionTitle title={tr("settings.account", "Account")} style={{ marginTop: theme.spacing.l }} />
             <Card style={{ padding: 12 }}>
               {!authReady ? (
-                <Text style={{ color: theme.colors.muted, fontWeight: "700" }}>{tr("common.loading", "Loading...")}</Text>
+                <Text style={{ color: theme.colors.muted, fontWeight: "700", fontFamily: FONT.body, letterSpacing: LETTER_SPACING.body }}>{tr("common.loading", "Loading...")}</Text>
               ) : isSignedIn ? (
                 <>
-                  <Text style={{ color: theme.colors.text, fontWeight: "900", marginBottom: 10 }}>
+                  <Text style={{ color: theme.colors.text, fontWeight: "900", marginBottom: 10, fontFamily: FONT.body, letterSpacing: LETTER_SPACING.body }}>
                     {tr("auth.signedInAs", "Signed in as:")} {authEmail ?? "—"}
                   </Text>
 
                   <Button title={tr("auth.logout", "Logout")} variant="ghost" onPress={() => signOut?.()} />
+
+                  <View style={{ height: 12 }} />
+
+                  <DestructiveButton
+                    title={deleteBusy ? "Deleting..." : "Delete account"}
+                    disabled={deleteBusy}
+                    onPress={doDeleteAccount}
+                  />
+
+                  <Text style={{ color: theme.colors.muted, marginTop: 8, fontSize: 12, fontWeight: "700", fontFamily: FONT.body, letterSpacing: LETTER_SPACING.body }}>
+                    This permanently removes your account and all data.
+                  </Text>
+
                 </>
               ) : (
                 <>
                   <Button title={tr("auth.loginMagicLink", "Login (magic link)")} onPress={() => setLoginOpen(true)} />
-                  <Text style={{ color: theme.colors.muted, marginTop: 8, fontSize: 12, fontWeight: "700" }}>
+                  <Text style={{ color: theme.colors.muted, marginTop: 8, fontSize: 12, fontWeight: "700", fontFamily: FONT.body, letterSpacing: LETTER_SPACING.body }}>
                     {tr("auth.magicLinkHelp", "We’ll email you a sign-in link.")}
                   </Text>
                 </>
@@ -631,11 +717,11 @@ async function doJoinFamily() {
             {/* ABOUT */}
             <SectionTitle title={tr("settings.about", "About")} style={{ marginTop: theme.spacing.l }} />
             <Card style={{ padding: 12 }}>
-              <Text style={{ color: theme.colors.muted, fontWeight: "700" }}>
+              <Text style={{ color: theme.colors.muted, fontWeight: "700", fontFamily: FONT.body, letterSpacing: LETTER_SPACING.body }}>
                 {tr("settings.aboutLine", "Family app for tasks and organization.")}
               </Text>
               <View style={{ height: 10 }} />
-              <Text style={{ color: theme.colors.text, fontWeight: "900" }}>
+              <Text style={{ color: theme.colors.text, fontWeight: "900", fontFamily: FONT.body, letterSpacing: LETTER_SPACING.body }}>
                 {tr("settings.version", "Version")}: {version}
               </Text>
             </Card>
@@ -645,7 +731,7 @@ async function doJoinFamily() {
         {/* LANGUAGE SHEET */}
         <BottomSheet visible={langOpen} onClose={() => setLangOpen(false)}>
           <Card>
-            <Text style={{ fontSize: 18, fontWeight: "900", color: theme.colors.text }}>
+            <Text style={{ fontSize: 18, fontWeight: "900", color: theme.colors.text, fontFamily: FONT.title, letterSpacing: LETTER_SPACING.title }}>
               {tr("settings.language", "Language")}
             </Text>
             <Text style={{ color: theme.colors.muted, marginTop: 6 }}>
@@ -670,7 +756,7 @@ async function doJoinFamily() {
         {/* RENAME FAMILY SHEET */}
         <BottomSheet visible={renameOpen} onClose={() => setRenameOpen(false)}>
           <Card>
-            <Text style={{ fontSize: 18, fontWeight: "900", color: theme.colors.text }}>
+            <Text style={{ fontSize: 18, fontWeight: "900", color: theme.colors.text, fontFamily: FONT.title, letterSpacing: LETTER_SPACING.title }}>
               {tr("settings.renameFamilyTitle", "Rename family")}
             </Text>
 
@@ -694,7 +780,7 @@ async function doJoinFamily() {
         {/* RENAME ME SHEET */}
         <BottomSheet visible={nameOpen} onClose={() => setNameOpen(false)}>
           <Card>
-            <Text style={{ fontSize: 18, fontWeight: "900", color: theme.colors.text }}>
+            <Text style={{ fontSize: 18, fontWeight: "900", color: theme.colors.text, fontFamily: FONT.title, letterSpacing: LETTER_SPACING.title }}>
               {tr("settings.myProfile", "My profile")}
             </Text>
 
@@ -771,7 +857,7 @@ async function doJoinFamily() {
 
         <BottomSheet visible={createOpen} onClose={() => setCreateOpen(false)}>
           <Card>
-            <Text style={{ fontSize: 18, fontWeight: "900", color: theme.colors.text }}>
+            <Text style={{ fontSize: 18, fontWeight: "900", color: theme.colors.text, fontFamily: FONT.title, letterSpacing: LETTER_SPACING.title }}>
               {tr("settings.createFamily.title", "Create family")}
             </Text>
 
@@ -807,7 +893,7 @@ async function doJoinFamily() {
 
         <BottomSheet visible={joinOpen} onClose={() => setJoinOpen(false)}>
           <Card>
-            <Text style={{ fontSize: 18, fontWeight: "900", color: theme.colors.text }}>
+            <Text style={{ fontSize: 18, fontWeight: "900", color: theme.colors.text, fontFamily: FONT.title, letterSpacing: LETTER_SPACING.title }}>
               {tr("settings.joinFamily.title", "Join family")}
             </Text>
 
@@ -846,7 +932,7 @@ async function doJoinFamily() {
         {/* LOGIN SHEET */}
         <BottomSheet visible={loginOpen} onClose={() => setLoginOpen(false)}>
           <Card>
-            <Text style={{ fontSize: 18, fontWeight: "900", color: theme.colors.text }}>
+            <Text style={{ fontSize: 18, fontWeight: "900", color: theme.colors.text, fontFamily: FONT.title, letterSpacing: LETTER_SPACING.title }}>
               {tr("auth.loginMagicLink", "Login (magic link)")}
             </Text>
 
@@ -892,16 +978,27 @@ const styles = StyleSheet.create({
     }),
   },
   heroTitle: {
-    fontSize: 24,
+    fontSize: 22,
     fontWeight: "900",
     color: theme.colors.text,
-    letterSpacing: 0.2,
+    letterSpacing: LETTER_SPACING.title,
+    fontFamily: FONT.title,
   },
   heroSub: {
     marginTop: 5,
     fontSize: 13,
     fontWeight: "700",
     color: theme.colors.muted,
+    fontFamily: FONT.body,
+    letterSpacing: LETTER_SPACING.body,
+  },
+  heroArt: {
+    position: "absolute" as const,
+    right: 22,
+    top: -20,
+    width: 130,
+    height: 130,
+    pointerEvents: "none" as const,
   },
   heroAccentBg: {
     position: "absolute",
@@ -929,18 +1026,24 @@ const styles = StyleSheet.create({
     color: theme.colors.muted,
     fontSize: 12,
     fontWeight: "800",
+    fontFamily: FONT.body,
+    letterSpacing: LETTER_SPACING.body,
   },
   infoValue: {
     color: theme.colors.text,
     fontSize: 16,
     fontWeight: "900",
     marginTop: 6,
+    fontFamily: FONT.body,
+    letterSpacing: LETTER_SPACING.body,
   },
   infoHint: {
     marginTop: 8,
     color: theme.colors.muted,
     fontSize: 12,
     fontWeight: "700",
+    fontFamily: FONT.body,
+    letterSpacing: LETTER_SPACING.body,
   },
 
   setupCallout: {
@@ -956,23 +1059,31 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "900",
     marginBottom: 6,
+    fontFamily: FONT.body,
+    letterSpacing: LETTER_SPACING.body,
   },
   setupLine: {
     color: theme.colors.text,
     fontSize: 13,
     fontWeight: "800",
     marginTop: 2,
+    fontFamily: FONT.body,
+    letterSpacing: LETTER_SPACING.body,
   },
   setupHint: {
     color: theme.colors.muted,
     fontSize: 12,
     fontWeight: "700",
+    fontFamily: FONT.body,
+    letterSpacing: LETTER_SPACING.body,
   },
   helpText: {
     color: theme.colors.muted,
     marginTop: 8,
     fontSize: 12,
     fontWeight: "700",
+    fontFamily: FONT.body,
+    letterSpacing: LETTER_SPACING.body,
   },
 
   modalRoot: {
@@ -1001,6 +1112,8 @@ const styles = StyleSheet.create({
     padding: 12,
     backgroundColor: "#fff",
     color: theme.colors.text,
+    fontFamily: FONT.body,
+    letterSpacing: LETTER_SPACING.body,
   },
 
 segPill: {
@@ -1022,9 +1135,13 @@ segPillOff: {
 segTextOn: {
   color: "#fff",
   fontWeight: "900",
+    fontFamily: FONT.body,
+    letterSpacing: LETTER_SPACING.body,
 },
 segTextOff: {
   color: theme.colors.text,
   fontWeight: "900",
+    fontFamily: FONT.body,
+    letterSpacing: LETTER_SPACING.body,
 },
 });

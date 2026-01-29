@@ -1,28 +1,52 @@
-// /app/(tabs)/home.tsx
-import React, { useEffect, useMemo, useRef, useState } from "react";
-import {
-  Alert,
-  Animated,
-  FlatList,
-  Modal,
-  Platform,
-  Pressable,
-  RefreshControl,
-  Text,
-  View,
-  Image,
-} from "react-native";
-
+// app/(tabs)/home.tsx
+import React, { useEffect, useMemo, useState } from "react";
+import { Image, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native";
+import { useRouter } from "expo-router";
+import { useFocusEffect } from "@react-navigation/native";
+import { Ionicons } from "@expo/vector-icons";
+import { FONT, LETTER_SPACING } from "../../lib/typography";
 import { Screen } from "../../src/ui/components/Screen";
 import { Card } from "../../src/ui/components/Card";
-import { Button } from "../../src/ui/components/Button";
-import { EmptyState } from "../../src/ui/components/EmptyState";
 import { theme } from "../../src/ui/theme";
 
 import { useT } from "../../lib/useT";
-import { useTasks, Task } from "../../lib/tasks";
 import { useMembers } from "../../lib/members";
-import { useLocale } from "../../lib/locale";
+import { useTasks } from "../../lib/tasks";
+import { useShopping } from "../../lib/shopping";
+import { supabase } from "../../lib/supabase";
+
+// Local Planner is stored in AsyncStorage (same as planner.tsx)
+const STORAGE_KEY = "famigo_planner_v2";
+
+const HOME_HEADER_IMG = require("../../assets/avatars/stats/home.png");
+const PLANNER_HEADER_IMG = require("../../assets/avatars/stats/planner.png");
+const TASKS_HEADER_IMG = require("../../assets/avatars/stats/header-tasks.png");
+const SHOPPING_HEADER_IMG = require("../../assets/avatars/stats/header-shopping.png");
+
+// Central typography helpers (Nunito via lib/typography)
+const TYPO = {
+  title: { fontFamily: FONT.title, letterSpacing: LETTER_SPACING.title as any },
+  body: { fontFamily: FONT.body, letterSpacing: LETTER_SPACING.body as any },
+};
+
+// Optional AsyncStorage (if installed)
+let AsyncStorage: any = null;
+
+// Optional Haptics (if installed)
+let Haptics: any = null;
+try {
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  Haptics = require("expo-haptics");
+} catch {
+  Haptics = null;
+}
+
+try {
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  AsyncStorage = require("@react-native-async-storage/async-storage").default;
+} catch {
+  AsyncStorage = null;
+}
 
 function getT() {
   const tx = useT() as any;
@@ -34,1215 +58,723 @@ function startOfDay(ts: number) {
   d.setHours(0, 0, 0, 0);
   return d.getTime();
 }
-function endOfDay(ts: number) {
-  const d = new Date(ts);
-  d.setHours(23, 59, 59, 999);
-  return d.getTime();
-}
-function addDays(ts: number, days: number) {
-  const d = new Date(ts);
-  d.setDate(d.getDate() + days);
-  return d.getTime();
-}
-function toHHMM(ts: number) {
-  const d = new Date(ts);
-  return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+
+function formatTimeFromDigits(digits: string) {
+  const d = String(digits ?? "").replace(/[^0-9]/g, "").slice(0, 4);
+  if (!d) return "";
+  if (d.length <= 2) return d;
+  return `${d.slice(0, 2)}:${d.slice(2)}`;
 }
 
-function formatDueInline(ts: number) {
-  const d = new Date(ts);
-  const date = d.toLocaleDateString(undefined, { day: "2-digit", month: "2-digit" });
-  const time = d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-  return `${date} ${time}`;
-}
-function formatLongDate(d: Date, locale?: string) {
-  try {
-    return d.toLocaleDateString(locale || undefined, {
-      weekday: "long",
-      day: "2-digit",
-      month: "2-digit",
-      year: "numeric",
-    });
-  } catch {
-    return d.toLocaleDateString(undefined, {
-      weekday: "long",
-      day: "2-digit",
-      month: "2-digit",
-      year: "numeric",
-    });
-  }
-}
+type PlannerItem = {
+  id: string;
+  dayTs0: number; // start of day
+  title: string;
+  timeDigits: string; // "HHMM" digits
+  assignedTo: "me" | "all" | "some";
+  memberIds: string[];
+  createdAt?: number;
+};
 
-type TaskStatus = "open" | "claimed" | "review" | "done";
-function getStatus(t: Task): TaskStatus {
-  return (((t as any)?.status as TaskStatus) || "open") as TaskStatus;
-}
+function Pill(props: { label: string }) {
 
 
-function getStatusBarStyle(status: string, isLate: boolean) {
-  if (isLate && status !== "done") return { backgroundColor: theme.colors.danger };
-  if (status === "done") return { backgroundColor: "#22c55e" };
-  if (status === "review") return { backgroundColor: "#8b5cf6" };
-  if (status === "claimed") return { backgroundColor: "#f59e0b" };
-  return { backgroundColor: theme.colors.primary };
-}
-
-
-function TaskTimeline({
-  status,
-  hintText,
-}: {
-  status: string;
-  hintText: string;
-}) {
-  const s = String(status ?? "open");
-
-  // 3-step timeline: Created/Assigned -> Done -> Approved
-  const step1Done = true;
-  const step2Done = s === "review" || s === "done";
-  const step2Active = !step2Done && (s === "open" || s === "claimed");
-  const step3Done = s === "done";
-  const step3Active = !step3Done && s === "review";
-
-  function dotStyle(done: boolean, active: boolean) {
-    if (done) return [styles.tlDot, styles.tlDotDone];
-    if (active) return [styles.tlDot, styles.tlDotActive];
-    return [styles.tlDot, styles.tlDotPending];
-  }
-  function lineStyle(done: boolean) {
-    return [styles.tlLine, done ? styles.tlLineDone : styles.tlLinePending];
-  }
-
-  const line12Done = step2Done;
-  const line23Done = step3Done;
 
   return (
-    <View style={styles.tlWrap} accessibilityLabel="Task progress">
-      <View style={styles.tlRow}>
-        <View style={dotStyle(step1Done, false)} />
-        <View style={lineStyle(line12Done)} />
-        <View style={dotStyle(step2Done, step2Active)} />
-        <View style={lineStyle(line23Done)} />
-        <View style={dotStyle(step3Done, step3Active)} />
-      </View>
-
+    <View style={styles.pill}>
+      <View style={styles.pillDot} />
+      <Text style={[styles.pillText, TYPO.body]}>{props.label}</Text>
     </View>
   );
 }
 
+function Chip(props: { label: string; tone?: "primary" | "neutral" }) {
+  const primary = props.tone === "primary";
+  return (
+    <View style={[styles.chip, primary && styles.chipPrimary]}>
+      <Text style={[styles.chipText, TYPO.body, primary && styles.chipTextPrimary]}>{props.label}</Text>
+    </View>
+  );
+}
 
-function InfoButton({ onPress }: { onPress: () => void }) {
+function RowIconTile(props: { icon: keyof typeof Ionicons.glyphMap }) {
+  return (
+    <View style={styles.rowIconTile}>
+      <Ionicons name={props.icon} size={18} color={theme.colors.primary} />
+    </View>
+  );
+}
+
+function SkeletonRow() {
+  return (
+    <View style={styles.skelRow}>
+      <View style={styles.skelIcon} />
+      <View style={{ flex: 1 }}>
+        <View style={styles.skelLine1} />
+        <View style={styles.skelLine2} />
+      </View>
+    </View>
+  );
+}
+
+function PressableFilter(props: { active: boolean; label: string; onPress: () => void }) {
   return (
     <Pressable
-      onPress={onPress}
-      hitSlop={10}
-      style={({ pressed }) => [styles.infoBtn, pressed ? { opacity: 0.75, transform: [{ scale: 0.98 }] } : null]}
+      onPress={() => { try { Haptics?.selectionAsync?.(); } catch {} props.onPress(); }}
+      style={({ pressed }) => [
+        styles.segmentBtn,
+        props.active && { backgroundColor: theme.colors.primary, borderColor: theme.colors.primary },
+        pressed && { opacity: 0.9 },
+      ]}
     >
-      <Text style={styles.infoBtnText}>i</Text>
+      <Text style={[styles.segmentText, TYPO.body, props.active && { color: "#fff" }]}>{props.label}</Text>
     </Pressable>
   );
 }
 
-function InfoSheet({
-  visible,
-  title,
-  body,
-  okLabel,
-  onClose,
-}: {
-  visible: boolean;
-  title: string;
-  body: string;
-  okLabel: string;
-  onClose: () => void;
-}) {
+function SectionHeader(props: { title: string; art?: any; icon?: any; rightSlot?: React.ReactNode }) {
   return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
-      <Pressable style={styles.infoBackdrop} onPress={onClose}>
-        <Pressable style={styles.infoCard} onPress={() => {}}>
-          <Text style={styles.infoTitle}>{title}</Text>
-          <Text style={styles.infoBody}>{body}</Text>
-          <View style={{ height: 12 }} />
-          <Button title={okLabel} onPress={onClose} style={styles.infoOkBtn} textStyle={styles.infoOkText} />
-        </Pressable>
-      </Pressable>
-    </Modal>
+    <View style={styles.sectionHeaderRow}>
+      {/* floating illustration (subtle) */}
+      {props.art ? <Image source={props.art} style={styles.sectionArtFloat} resizeMode="contain" /> : null}
+
+      <View style={styles.sectionHeaderLeft}>
+        {props.icon ? (
+          <View style={styles.sectionIcon}>
+            <Ionicons name={props.icon} size={16} color={theme.colors.primary} />
+          </View>
+        ) : (
+          <View style={styles.sectionDot} />
+        )}
+
+        <Text style={[styles.sectionTitle, TYPO.title]} numberOfLines={1}>
+          {props.title}
+        </Text>
+      </View>
+
+      <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+        {props.rightSlot ? props.rightSlot : null}
+      </View>
+    </View>
   );
 }
 
-function Segmented3({
-  a,
-  b,
-  c,
-  value,
-  onChange,
-}: {
-  a: string;
-  b: string;
-  c: string;
-  value: "family" | "me" | "kids";
-  onChange: (v: "family" | "me" | "kids") => void;
-}) {
+function CardMore(props: { label: string; onPress: () => void }) {
   return (
-    <View style={styles.segmentWrap}>
+    <View style={styles.cardFooter}>
       <Pressable
-        onPress={() => onChange("family")}
-        style={[styles.segmentBtn, value === "family" ? styles.segmentOn : styles.segmentOff]}
+        onPress={props.onPress}
+        hitSlop={10}
+        style={({ pressed }) => [
+          styles.moreBtn,
+          pressed && { opacity: 0.92, backgroundColor: "rgba(47,107,255,0.10)" },
+        ]}
       >
-        <Text style={[styles.segmentText, value === "family" ? styles.segmentTextOn : styles.segmentTextOff]} numberOfLines={1}>
-          {a}
-        </Text>
-      </Pressable>
-      <Pressable onPress={() => onChange("me")} style={[styles.segmentBtn, value === "me" ? styles.segmentOn : styles.segmentOff]}>
-        <Text style={[styles.segmentText, value === "me" ? styles.segmentTextOn : styles.segmentTextOff]} numberOfLines={1}>
-          {b}
-        </Text>
-      </Pressable>
-      <Pressable
-        onPress={() => onChange("kids")}
-        style={[styles.segmentBtn, value === "kids" ? styles.segmentOn : styles.segmentOff]}
-      >
-        <Text style={[styles.segmentText, value === "kids" ? styles.segmentTextOn : styles.segmentTextOff]} numberOfLines={1}>
-          {c}
-        </Text>
+        <Text style={[styles.moreText, TYPO.body]}>{props.label}</Text>
+        <Ionicons name="chevron-forward" size={16} color={theme.colors.muted} />
       </Pressable>
     </View>
   );
 }
 
-type SectionKey = "review" | "today" | "upcoming" | "anytime" | "done";
-type HomeFilter = "all" | "active" | "review" | "done";
-type HomeRow =
-  | { type: "hero"; key: "hero" }
-  | { type: "section"; key: SectionKey; title: string; hint?: string; count: number }
-  | { type: "task"; key: string; item: Task };
-
 export default function HomeScreen() {
+  const router = useRouter();
+
   const t = getT();
   function tr(key: string, fallback: string, params?: Record<string, any>) {
     const v = t?.(key, params);
-    if (!v) return fallback;
-    if (typeof v === "string" && v.startsWith("[missing")) return fallback;
-    return v as string;
+
+    // Only allow strings to reach <Text/>. Some i18n libs can return objects
+    // (e.g., pluralization maps like { none: "", one: ""}), which crashes RN rendering.
+    const base =
+      typeof v === "string" && v && !v.startsWith("[missing")
+        ? v
+        : fallback;
+
+    if (params && Object.keys(params).length) {
+      let out = base;
+      for (const [k, val] of Object.entries(params)) out = out.split(`{{${k}}}`).join(String(val));
+      return out;
+    }
+
+    return base;
   }
 
-  const { locale } = (useLocale() as any) ?? {};
-  const { ready: membersReady, myId, me, isParent, familyName, members } = useMembers() as any;
+  const viewMoreLabel = tr("home.viewMore", tr("home.viewMore", "View more"));
 
-  const {
-    tasks,
-    ready: tasksReady,
-    refresh,
-    claimTask,
-    unclaimTask,
-    requestDone,
-    approveDone,
-    rejectDone,
-    completeAuto,
-  } = useTasks() as any;
-  const myName = String(me?.name ?? tr("common.me", "Me"));
 
-  const [now, setNow] = useState(() => new Date());
-  useEffect(() => {
-    const id = setInterval(() => setNow(new Date()), 60_000);
-    return () => clearInterval(id);
-  }, []);
+  const membersHook = useMembers() as any;
+  const { familyId, inFamily, myId, members } = membersHook;
 
-  const [busyId, setBusyId] = useState<string | null>(null);
+  const tasksHook = useTasks() as any;
+  const tasks = tasksHook?.tasks ?? [];
+
+  const shoppingHook = useShopping(familyId, { includeBought: true } as any) as any;
+  const items = shoppingHook?.items ?? [];
+
+  const tasksLoading = Boolean(tasksHook?.loading ?? tasksHook?.isLoading ?? false);
+  const membersLoading = Boolean(membersHook?.loading ?? membersHook?.isLoading ?? false);
+  const shoppingLoading = Boolean(shoppingHook?.loading ?? shoppingHook?.isLoading ?? false);
+
+  const [scope, setScope] = useState<"family" | "me" | "kids">("me");
   const [refreshing, setRefreshing] = useState(false);
 
-  // Small, on-demand help overlays (opened via "i" buttons)
-  const [infoVisible, setInfoVisible] = useState(false);
-  const [infoTitle, setInfoTitle] = useState("");
-  const [infoBody, setInfoBody] = useState("");
-
-  function openInfo(title: string, body: string) {
-    setInfoTitle(title);
-    setInfoBody(body);
-    setInfoVisible(true);
-  }
-
-  const today0 = useMemo(() => startOfDay(now.getTime()), [now]);
-  const todayEnd = useMemo(() => endOfDay(now.getTime()), [now]);
-  const upcomingEnd = useMemo(() => endOfDay(addDays(today0, 7)), [today0]);
-
-  const subtitle = useMemo(() => formatLongDate(now, locale), [now, locale]);
-
-  // Default scope for everyone (parents + kids) is "me".
-  // Users can switch to Family / Kids, but Home always starts focused on their own tasks.
-  const [scope3, setScope3] = useState<"family" | "me" | "kids">("me");
-  useEffect(() => {
-    setScope3("me");
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [myId]);
-
-  const scopeHint = useMemo(() => {
-    if (scope3 === "me") return tr("home.scopeHint.me", "Tasks that are for you");
-    if (scope3 === "kids") return tr("home.scopeHint.kids", "Tasks for all kids");
-    return tr("home.scopeHint.family", "All family tasks");
-  }, [scope3, t, myId]);
-
-  const [homeFilter, setHomeFilter] = useState<HomeFilter>("all");
-
-  const kidsIds = useMemo(() => {
-    const list = Array.isArray(members) ? members : [];
-    return list
-      .filter((m: any) => {
-        const role = String(m?.role ?? m?.type ?? "").toLowerCase();
-        if (role) return role.includes("child") || role.includes("kid") || role.includes("kids");
-        const isP = Boolean(m?.is_parent ?? m?.isParent);
-        return !isP && String(m?.id) !== String(myId);
-      })
-      .map((m: any) => String(m?.id));
-  }, [members, myId]);
-
-  const visibleTasks = useMemo(() => {
-    const list: Task[] = Array.isArray(tasks) ? tasks : [];
-    if (scope3 === "family") return list;
-
-    if (scope3 === "me") {
-      return list.filter((x) => {
-        const aId = (x as any)?.assignedToId ?? null;
-        const cId = (x as any)?.claimedById ?? null;
-        const rId = (x as any)?.requestedDoneById ?? null;
-        return (
-          (aId && String(aId) === String(myId)) ||
-          (cId && String(cId) === String(myId)) ||
-          (rId && String(rId) === String(myId))
-        );
-      });
-    }
-
-    // kids scope
-    return list.filter((x) => {
-      const aId = (x as any)?.assignedToId ?? null;
-      const cId = (x as any)?.claimedById ?? null;
-      const rId = (x as any)?.requestedDoneById ?? null;
-      const okA = aId && kidsIds.includes(String(aId));
-      const okC = cId && kidsIds.includes(String(cId));
-      const okR = rId && kidsIds.includes(String(rId));
-      return Boolean(okA || okC || okR);
-    });
-  }, [tasks, scope3, myId, kidsIds]);
-
-  const derived = useMemo(() => {
-    const all: Task[] = Array.isArray(visibleTasks) ? visibleTasks : [];
-    const done: Task[] = [];
-    const review: Task[] = [];
-    const activeNotDone: Task[] = [];
-
-    for (const x of all) {
-      const s = getStatus(x);
-      if (s === "done") done.push(x);
-      else {
-        activeNotDone.push(x);
-        if (s === "review") review.push(x);
-      }
-    }
-
-    return { all, done, review, activeNotDone };
-  }, [visibleTasks]);
-
-  const buckets = useMemo(() => {
-    const review: Task[] = [];
-    const today: Task[] = [];
-    const upcoming: Task[] = [];
-    const anytime: Task[] = [];
-    const done: Task[] = [];
-
-    for (const x of derived.all) {
-      const s = getStatus(x);
-      const due = (x as any)?.dueAt ? Number((x as any).dueAt) : null;
-
-      if (s === "done") {
-        done.push(x);
-        continue;
-      }
-      if (s === "review") {
-        review.push(x);
-        continue;
-      }
-      if (!due) {
-        anytime.push(x);
-        continue;
-      }
-      if (due >= today0 && due <= todayEnd) today.push(x);
-      else if (due > todayEnd && due <= upcomingEnd) upcoming.push(x);
-      else if (due < today0) today.push(x); // overdue -> today
-    }
-
-    const byPriority = (a: Task, b: Task) => {
-      const ad = (a as any)?.dueAt ? Number((a as any).dueAt) : 0;
-      const bd = (b as any)?.dueAt ? Number((b as any).dueAt) : 0;
-      const aOver = ad && ad < today0 ? 1 : 0;
-      const bOver = bd && bd < today0 ? 1 : 0;
-      if (aOver !== bOver) return bOver - aOver;
-      if (!ad && bd) return 1;
-      if (ad && !bd) return -1;
-      return ad - bd;
-    };
-
-    review.sort(byPriority);
-    today.sort(byPriority);
-    upcoming.sort(byPriority);
-    anytime.sort(byPriority);
-
-    const doneSort = (a: Task, b: Task) => {
-      const aa = Number((a as any)?.doneAt ?? (a as any)?.updatedAt ?? (a as any)?.dueAt ?? 0);
-      const bb = Number((b as any)?.doneAt ?? (b as any)?.updatedAt ?? (b as any)?.dueAt ?? 0);
-      return bb - aa;
-    };
-    done.sort(doneSort);
-
-    return { review, today, upcoming, anytime, done };
-  }, [derived, today0, todayEnd, upcomingEnd]);
-
-  const counts = useMemo(() => {
-    return { active: derived.activeNotDone.length, review: derived.review.length, done: derived.done.length };
-  }, [derived]);
-
-  // Count-up animation
-  const animA = useRef(new Animated.Value(counts.active)).current;
-  const animR = useRef(new Animated.Value(counts.review)).current;
-  const animD = useRef(new Animated.Value(counts.done)).current;
-
-  const [dispA, setDispA] = useState(counts.active);
-  const [dispR, setDispR] = useState(counts.review);
-  const [dispD, setDispD] = useState(counts.done);
-
-  useEffect(() => {
-    const sA = animA.addListener(({ value }) => setDispA(Math.round(value)));
-    const sR = animR.addListener(({ value }) => setDispR(Math.round(value)));
-    const sD = animD.addListener(({ value }) => setDispD(Math.round(value)));
-
-    Animated.parallel([
-      Animated.timing(animA, { toValue: counts.active, duration: 300, useNativeDriver: false }),
-      Animated.timing(animR, { toValue: counts.review, duration: 300, useNativeDriver: false }),
-      Animated.timing(animD, { toValue: counts.done, duration: 300, useNativeDriver: false }),
-    ]).start();
-
-    return () => {
-      animA.removeListener(sA);
-      animR.removeListener(sR);
-      animD.removeListener(sD);
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [counts.active, counts.review, counts.done]);
-
-  const rows: HomeRow[] = useMemo(() => {
-    const out: HomeRow[] = [];
-    out.push({ type: "hero", key: "hero" });
-
-    const pushSection = (key: SectionKey, title: string, hint: string, items: Task[]) => {
-      if (!items.length) return;
-      out.push({ type: "section", key, title, hint, count: items.length });
-      for (const it of items) out.push({ type: "task", key: String((it as any).id), item: it });
-    };
-
-    if (homeFilter === "done") {
-      pushSection("done", tr("home.doneTitle", "Done"), tr("home.doneHint", "Recently completed"), buckets.done);
-      return out;
-    }
-
-    if (homeFilter === "review") {
-      pushSection(
-        "review",
-        tr("home.reviewTitle", "Needs approval"),
-        isParent ? tr("home.reviewHint", "Waiting for your decision") : tr("home.reviewHintChild", "Waiting for parent"),
-        buckets.review
-      );
-      return out;
-    }
-
-    if (homeFilter === "all") {
-      pushSection(
-        "review",
-        tr("home.reviewTitle", "Needs approval"),
-        isParent ? tr("home.reviewHint", "Waiting for your decision") : tr("home.reviewHintChild", "Waiting for parent"),
-        buckets.review
-      );
-    }
-
-    pushSection("today", tr("home.todayTitle", "Today"), tr("home.todayHint", "Focus"), buckets.today);
-    pushSection("upcoming", tr("home.upcomingTitle", "Upcoming"), tr("home.upcomingHint", "Next 7 days"), buckets.upcoming);
-    pushSection("anytime", tr("home.anytimeTitle", "Anytime"), tr("home.anytimeHint", "No due date"), buckets.anytime);
-
-    return out;
-  }, [buckets, homeFilter, isParent, t]);
-
-  async function onRefresh() {
-    if (refreshing) return;
+  const onRefresh = React.useCallback(async () => {
     setRefreshing(true);
     try {
-      await refresh?.();
+      // Re-read Planner (family mode uses Supabase, local mode uses AsyncStorage)
+      await readPlannerIntoState(() => true);
+
+      // Best-effort refetch for other sources (depends on hook implementation)
+      await Promise.allSettled([
+        membersHook?.refresh?.(),
+        membersHook?.refetch?.(),
+        membersHook?.reload?.(),
+        tasksHook?.refresh?.(),
+        tasksHook?.refetch?.(),
+        tasksHook?.reload?.(),
+        shoppingHook?.refresh?.(),
+        shoppingHook?.refetch?.(),
+        shoppingHook?.reload?.(),
+      ]);
     } finally {
       setRefreshing(false);
     }
-  }
+  }, [membersHook, tasksHook, shoppingHook, inFamily, familyId]);
 
-  async function runAction(task: Task, fn: () => Promise<void>) {
-    if (busyId) return;
-    setBusyId(String((task as any).id));
+
+
+  // --- Planner: load from AsyncStorage (best-effort) ---
+  const [plannerItems, setPlannerItems] = useState<PlannerItem[]>([]);
+  const [plannerLoading, setPlannerLoading] = useState(true);
+  // Load planner into state (single source of truth):
+  // - If user is in a family: fetch from Supabase planner_items
+  // - Otherwise: read from AsyncStorage (legacy/local mode)
+  async function readPlannerIntoState(aliveCheck: () => boolean) {
     try {
-      await fn();
-      await refresh?.();
-    } catch (e: any) {
-      Alert.alert(tr("common.error", "Error"), e?.message ?? tr("tasks.errors.actionFailed", "Action failed"));
+      if (!aliveCheck()) return;
+      setPlannerLoading(true);
+
+      // ✅ FAMILY MODE → Supabase
+      if (inFamily && familyId) {
+        const { data, error } = await supabase
+          .from("planner_items")
+          .select("*")
+          .eq("family_id", familyId);
+
+        if (!aliveCheck()) return;
+        if (error) throw error;
+
+        const fromYMDLocal = (ymd: string) => {
+          const [y, m, d] = String(ymd).split("-").map((x) => Number(x));
+          const dt = new Date(y, (m || 1) - 1, d || 1, 0, 0, 0, 0);
+          dt.setHours(0, 0, 0, 0);
+          return dt.getTime();
+        };
+
+        const mapped = (Array.isArray(data) ? data : []).map((row: any) => {
+          const plannedDate = String(row?.planned_date ?? row?.plannedDate ?? "");
+          const dayTs0 = plannedDate ? fromYMDLocal(plannedDate) : startOfDay(Date.now());
+
+          const timeRaw =
+            row?.planned_time ??
+            row?.plannedTime ??
+            row?.time_digits ??
+            row?.timeDigits ??
+            row?.time ??
+            row?.planned_at ??
+            row?.plannedAt ??
+            "";
+
+          const timeDigits = String(timeRaw ?? "").replace(/[^0-9]/g, "").slice(0, 4);
+
+          const memberIdsRaw = row?.member_ids ?? row?.memberIds ?? [];
+          const memberIds = Array.isArray(memberIdsRaw) ? memberIdsRaw.map((x: any) => String(x)) : [];
+
+          const assignedTo = String(row?.assigned_to ?? row?.assignedTo ?? "me") as any;
+
+          const createdAt =
+            Number(row?.created_at ? new Date(row.created_at).getTime() : row?.createdAt ?? Date.now()) || Date.now();
+
+          return {
+            id: String(row?.id ?? `${Math.random()}`),
+            dayTs0,
+            title: String(row?.title ?? ""),
+            timeDigits,
+            assignedTo,
+            memberIds,
+            createdAt,
+          };
+        });
+
+        if (aliveCheck()) setPlannerItems(mapped as any);
+        return;
+      }
+
+      // ✅ LOCAL MODE → AsyncStorage
+      if (!AsyncStorage) {
+        if (aliveCheck()) setPlannerItems([]);
+        return;
+      }
+
+      const raw = await AsyncStorage.getItem(STORAGE_KEY);
+      if (!aliveCheck()) return;
+
+      if (!raw) {
+        setPlannerItems([]);
+        return;
+      }
+
+      const parsed = JSON.parse(raw);
+      // Support both legacy formats:
+      //  - Array<PlannerItem>
+      //  - { items: Array<PlannerItem> }
+      const arr = Array.isArray(parsed) ? parsed : Array.isArray(parsed?.items) ? parsed.items : [];
+      setPlannerItems(arr as any);
+    } catch (e) {
+      // best-effort
+      try { console.warn("HOME planner load failed", e); } catch {}
     } finally {
-      setBusyId(null);
+      if (aliveCheck()) setPlannerLoading(false);
     }
   }
 
-  function StatCard({
-    value,
-    label,
-    active,
-    onPress,
-  }: {
-    value: number;
-    label: string;
-    active: boolean;
-    onPress: () => void;
-  }) {
-    return (
-      <Pressable
-        onPress={onPress}
-        style={({ pressed }) => [
-          styles.statBox,
-          active ? styles.statBoxOn : null,
-          pressed ? { transform: [{ scale: 0.98 }], opacity: 0.92 } : null,
-        ]}
-      >
-        <Text style={[styles.statBig, active ? styles.statBigOn : null]}>{String(value)}</Text>
-        <Text style={[styles.statSmall, active ? styles.statSmallOn : null]} numberOfLines={1}>
-          {label}
-        </Text>
-      </Pressable>
-    );
-  }
+useEffect(() => {
+  let alive = true;
+  readPlannerIntoState(() => alive);
+  return () => {
+    alive = false;
+  };
+}, []);
 
-  function renderRow({ item }: { item: HomeRow }) {
-    if (item.type === "hero") {
-      const anyTaskCount = rows.filter((r) => r.type === "task").length;
-
-      return (
-        <View style={{ marginBottom: 12 }}>
-          <View style={styles.heroCard}>
-            {/* Hero logo (overlaps the card) */}
-            <View style={styles.heroHeader}>
-              <View style={styles.heroLogoWrap}>
-                <Image
-                  source={require("../../assets/avatars/stats/home-logo.png")}
-                  style={styles.heroLogo}
-                  resizeMode="contain"
-                />
-              </View>
-            </View>
-
-            <View style={{ height: 10 }} />
-
-            <View style={styles.scopeRow}>
-              <View style={{ flex: 1 }}>
-                <Segmented3
-                  a={tr("home.scope.family", "Family")}
-                  b={myName}
-                  c={tr("home.scope.kids", "Kids")}
-                  value={scope3}
-                  onChange={setScope3}
-                />
-              </View>
-            </View>
-
-            <View style={{ height: 8 }} />
-            <View style={styles.hintRow}>
-              <Text style={styles.sectionHint} numberOfLines={1}>
-                {scopeHint}
-              </Text>
-
-              <View style={styles.infoSlot}>
-              <InfoButton
-                onPress={() =>
-                  openInfo(
-                    tr("home.info.scope.title", "Views"),
-                    tr(
-                      "home.info.scope.body",
-                      "Me shows tasks that are for you. Family shows all tasks in your family. Kids shows tasks for all kids.\n\nTip: Home starts on Me so you can focus on what you need to do first."
-                    )
-                  )
-                }
-              />
-            </View>
-            </View>
-
-            <View style={{ height: 14 }} />
-
-            <View style={styles.statsRow}>
-              <StatCard
-                value={dispA}
-                label={tr("home.stats.active", "Active")}
-                active={homeFilter === "active"}
-                onPress={() => setHomeFilter((p) => (p === "active" ? "all" : "active"))}
-              />
-              <StatCard
-                value={dispR}
-                label={tr("home.stats.review", "Needs approval")}
-                active={homeFilter === "review"}
-                onPress={() => setHomeFilter((p) => (p === "review" ? "all" : "review"))}
-              />
-              <StatCard
-                value={dispD}
-                label={tr("home.stats.done", "Done")}
-                active={homeFilter === "done"}
-                onPress={() => setHomeFilter((p) => (p === "done" ? "all" : "done"))}
-              />
-            </View>
-
-            {homeFilter !== "all" ? (
-              <View style={styles.filterRow}>
-                <View style={styles.filterPill}>
-                  <Text style={styles.filterText} numberOfLines={1}>
-                    {tr("home.filterPrefix", "Filter")}:{" "}
-                    {homeFilter === "active"
-                      ? tr("home.stats.active", "Active")
-                      : homeFilter === "review"
-                        ? tr("home.stats.review", "Needs approval")
-                        : tr("home.stats.done", "Done")}
-                  </Text>
-                  <Pressable
-                    onPress={() => setHomeFilter("all")}
-                    style={({ pressed }) => [
-                      styles.filterClear,
-                      pressed ? { opacity: 0.75, transform: [{ scale: 0.98 }] } : null,
-                    ]}
-                  >
-                    <Text style={styles.filterClearText}>✕</Text>
-                  </Pressable>
-                </View>
-              </View>
-            ) : null}
-
-            <View style={styles.heroAccentBg} pointerEvents="none">
-              <View style={styles.heroAccent} />
-            </View>
-          </View>
-
-          {tasksReady && membersReady && anyTaskCount === 0 ? (
-            <View style={{ marginTop: 14 }}>
-              <EmptyState
-                title={tr("home.emptyTitle", "All clear ✅")}
-                subtitle={tr("home.emptySubtitle", "Add tasks in the Tasks tab or via Templates/Shopping.")}
-              />
-            </View>
-          ) : null}
-        </View>
-      );
-    }
-
-    if (item.type === "section") {
-      return (
-        <View style={{ marginTop: 10, marginBottom: 8 }}>
-          <View style={styles.sectionRow}>
-            <View style={{ flex: 1, paddingRight: 10 }}>
-              <Text style={styles.sectionTitle}>
-                {item.title} <Text style={{ color: theme.colors.muted }}>({item.count})</Text>
-              </Text>
-              {item.hint ? (
-                <Text style={styles.sectionHint} numberOfLines={1}>
-                  {item.hint}
-                </Text>
-              ) : null}
-            </View>
-
-            <View style={styles.infoSlot}>
-              {item.key === "review" ? (
-              <InfoButton
-                onPress={() =>
-                  openInfo(
-                    tr("home.info.review.title", "Waiting for approval"),
-                    isParent
-                      ? tr(
-                          "home.info.review.body.parent",
-                          "These tasks were completed by children and are waiting for your confirmation.\n\nTap Approve to mark them as done, or Not done to ask for changes."
-                        )
-                      : tr(
-                          "home.info.review.body.child",
-                          "You marked these tasks as done. They are waiting for a parent to confirm."
-                        )
-                  )
-                }
-              />
-            ) : null}
-            </View>
-          </View>
-        </View>
-      );
-    }
-const task = item.item;
-const status = getStatus(task);
-
-const dueAt = (task as any)?.dueAt ? Number((task as any).dueAt) : null;
-const dueText = dueAt ? formatDueInline(dueAt) : "";
-const isOverdue = !!(dueAt && status !== "done" && dueAt < now.getTime());
-
-const assignedToId = (task as any)?.assignedToId ?? null;
-const assignedToName = (task as any)?.assignedToName ?? null;
-
-const hasAssignee = Boolean(assignedToId || assignedToName);
-const isUnassigned = !Boolean(assignedToId);
-
-const isMine = Boolean(myId && (task as any)?.claimedById && String((task as any).claimedById) === String(myId));
-const isAssignee = Boolean(myId && assignedToId && String(assignedToId) === String(myId));
-
-// Simplified UX (same as Tasks tab):
-// - "I'll do it" only for open+unassigned
-// - "Mark done" for assignee when open (auto-claim+request), and for claimer when claimed
-// - Parent review: Approve / Not done
-// - Leave only for claimed+unassigned tasks (so someone else can take it)
-const canTake = status === "open" && isUnassigned;
-const canLeave = status === "claimed" && isMine && isUnassigned;
-
-const canMarkDone = (status === "open" && isAssignee) || (status === "claimed" && isMine);
-const canApprove = status === "review" && isParent;
-
-const rrRaw = (task as any)?.repeatRule ?? null;
-let isAuto = false;
-try {
-  const obj = typeof rrRaw === "string" ? JSON.parse(rrRaw) : rrRaw;
-  const preset = String(obj?.preset ?? obj?.kind ?? "").toLowerCase();
-  isAuto = preset === "interval" && !!obj?.days && Boolean(obj?.autoComplete ?? obj?.noApproval ?? false);
-} catch {
-  isAuto = false;
-}
-const canAutoDone = isAuto && status !== "done" && status !== "review";
-
-const busy = busyId === String((task as any).id);
-
-const actionInfo = (() => {
-  if (status === "open") {
-    return {
-      title: tr("home.info.actions.title", "Buttons"),
-      body: tr(
-        "home.info.actions.open",
-        "I'll do it: take this task if it has no assigned person.\n\nA task can be taken by only one person at a time."
-      ),
+useFocusEffect(
+  React.useCallback(() => {
+    let alive = true;
+    readPlannerIntoState(() => alive);
+    return () => {
+      alive = false;
     };
-  }
-  if (status === "claimed") {
-    return {
-      title: tr("home.info.actions.title", "Buttons"),
-      body: tr(
-        "home.info.actions.claimed",
-        "Mark done: send the task for approval.\n\nLeave: put it back so someone else can take it."
-      ),
-    };
-  }
-  if (status === "review") {
-    return {
-      title: tr("home.info.actions.title", "Buttons"),
-      body: isParent
-        ? tr(
-            "home.info.actions.review.parent",
-            "Approve: confirm the task is done.\n\nNot done: send it back for changes."
-          )
-        : tr("home.info.actions.review.child", "This task is waiting for a parent to confirm it."),
-    };
-  }
-  return null;
-})();
-
-return (
-  <Card style={styles.taskCard}>
-    <View style={styles.taskRow}>
-      <View style={[styles.statusBar, getStatusBarStyle(status, isOverdue)]} />
-      <View style={styles.taskContent}>
-        <View style={styles.taskHeader}>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.taskTitle} numberOfLines={2}>
-              {String((task as any)?.title ?? "")}
-            </Text>
-
-            <View style={{ height: 6 }} />
-
-            <Text style={styles.taskMeta} numberOfLines={2}>
-              {dueAt ? `${isOverdue ? "⚠️ " : ""}⏰ ${dueText}` : tr("tasks.due.none", "No due time")}
-            </Text>
-
-            {assignedToName ? (
-              <>
-                <View style={{ height: 4 }} />
-                <Text style={styles.taskMeta} numberOfLines={1}>
-                  {`${tr("tasks.assignedTo", "Assigned to")}: ${String(assignedToName)}`}
-                </Text>
-              </>
-            ) : null}
-          </View>
-
-          <TaskTimeline
-            status={status}
-            hintText={
-              hasAssignee
-                ? tr("tasks.timelineHint.assigned", "Assigned → Done → Approved")
-                : tr("tasks.timelineHint.created", "Created → Done → Approved")
-            }
-          />
-        </View>
-
-        {(canAutoDone || canTake || canLeave || canMarkDone || canApprove) ? (
-          <View style={styles.actionsRow}>
-            <View style={styles.actionsLeft}>
-              {canAutoDone ? (
-                <Button
-                  title={tr("tasks.action.doneAuto", "Done")}
-                  onPress={() => {
-                    if (!myId) return;
-                    runAction(task, async () => {
-                      await (completeAuto as any)?.(String((task as any).id), myId ?? "", myName);
-                    });
-                  }}
-                  style={styles.actionBtn}
-                  textStyle={styles.actionBtnText}
-                  disabled={busy || !myId}
-                />
-              ) : null}
-
-              {canTake ? (
-                <Button
-                  title={tr("tasks.action.illDoIt", "I'll do it")}
-                  onPress={() => {
-                    if (!myId) return;
-                    runAction(task, async () => {
-                      await claimTask(String((task as any).id), myId, myName);
-                    });
-                  }}
-                  style={styles.actionBtn}
-                  textStyle={styles.actionBtnText}
-                  disabled={busy || !myId}
-                />
-              ) : null}
-
-              {canMarkDone ? (
-                <Button
-                  title={tr("tasks.action.markDone", "Mark done")}
-                  onPress={() => {
-                    if (!myId) return;
-                    runAction(task, async () => {
-                      // One-tap flow:
-                      // - If open: auto-claim then request done
-                      // - If claimed: request done
-                      if (String((task as any)?.status ?? "open") === "open") {
-                        await claimTask(String((task as any).id), myId, myName);
-                      }
-                      await requestDone(String((task as any).id), myId, myName);
-                    });
-                  }}
-                  style={styles.actionBtn}
-                  textStyle={styles.actionBtnText}
-                  disabled={busy || !myId}
-                />
-              ) : null}
-
-              {canApprove ? (
-                <>
-                  <Button
-                    title={tr("tasks.action.approve", "Approve")}
-                    onPress={() =>
-                      runAction(task, async () => {
-                        await approveDone(String((task as any).id));
-                      })
-                    }
-                    style={styles.actionBtn}
-                    textStyle={styles.actionBtnText}
-                    disabled={busy || !myId}
-                  />
-                  <Button
-                    title={tr("tasks.action.notDone", "Not done")}
-                    variant="secondary"
-                    onPress={() =>
-                      runAction(task, async () => {
-                        await rejectDone(String((task as any).id));
-                      })
-                    }
-                    style={[styles.actionBtn, { opacity: 0.92 }]}
-                    textStyle={styles.actionBtnText}
-                    disabled={busy || !myId}
-                  />
-                </>
-              ) : null}
-
-              {canLeave ? (
-                <Button
-                  title={tr("tasks.action.leave", "Leave")}
-                  variant="secondary"
-                  onPress={() =>
-                    runAction(task, async () => {
-                      await unclaimTask(String((task as any).id));
-                    })
-                  }
-                  style={styles.actionBtn}
-                  textStyle={styles.actionBtnText}
-                  disabled={busy || !myId}
-                />
-              ) : null}
-            </View>
-
-            <View style={styles.infoSlot}>
-              {actionInfo ? <InfoButton onPress={() => openInfo(actionInfo.title, actionInfo.body)} /> : null}
-            </View>
-          </View>
-        ) : null}
-      </View>
-    </View>
-  </Card>
+  }, [inFamily, familyId])
 );
-  }
+// --- Derived: kids ids ---
+  const kidIds = useMemo(() => {
+    const list = Array.isArray(members) ? members : [];
+    return list
+      .filter((m: any) => (m?.role === "child" || m?.role === "kid") && String(m?.id ?? "") !== "")
+      .map((m: any) => String(m.id));
+  }, [members]);
+
+  // --- Planner: today's items, apply scope ---
+  const today0 = useMemo(() => startOfDay(Date.now()), []);
+  const plannerToday = useMemo(() => {
+    const list = (plannerItems ?? []).filter((it: any) => Number(it?.dayTs0) === today0);
+
+    const visible = list.filter((it: any) => {
+      const assignedTo = String(it?.assignedTo ?? "me");
+      const memberIds = Array.isArray(it?.memberIds) ? it.memberIds.map((x: any) => String(x)) : [];
+
+      if (scope === "family") return assignedTo === "all";
+
+
+      if (scope === "me") {
+        if (!myId) return assignedTo === "me";
+        if (assignedTo === "all") return true;
+        if (assignedTo === "me") return true;
+        if (assignedTo === "some") return memberIds.includes(String(myId));
+        return false;
+      }
+
+      // kids
+      if (assignedTo === "all") return true;
+      if (!kidIds.length) return false;
+      if (assignedTo === "some") return memberIds.some((id: any) => kidIds.includes(String(id)));
+      return false;
+    });
+
+    // sort by timeDigits then createdAt
+    return visible
+      .slice()
+      .sort((a: any, b: any) => {
+        const ta = Number(String(a?.timeDigits ?? "0").replace(/[^0-9]/g, "") || 0);
+        const tb = Number(String(b?.timeDigits ?? "0").replace(/[^0-9]/g, "") || 0);
+        if (ta !== tb) return ta - tb;
+        return Number(b?.createdAt ?? 0) - Number(a?.createdAt ?? 0);
+      })
+      .slice(0, 3);
+  }, [plannerItems, today0, scope, myId, kidIds]);
+
+  // --- Tasks: newest 3 (not urgent, just newest), apply scope ---
+  const latestTasks = useMemo(() => {
+    const list = (tasks ?? []).filter((tk: any) => {
+      const status = String(tk?.status ?? (tk?.done ? "done" : "open"));
+      if (status === "done") return false;
+
+     const assignedToId = String(
+  tk?.assignedToId ?? tk?.assigned_to_id ?? tk?.assignedTo ?? tk?.claimedById ?? ""
+);
+
+// što smatramo "family / shared" taskom
+const isFamilyTask =
+  !assignedToId ||                    // npr. null / ""
+  assignedToId === "family" ||
+  assignedToId === "all";
+
+// FAMILY → samo obiteljski (ne privatni "me")
+if (scope === "family") {
+  if (!myId) return true;
+  if (isFamilyTask) return true; // "", null, "all", "family"
+  return assignedToId !== String(myId);
+}
+
+// ME → moji + family
+if (scope === "me") {
+  if (!myId) return true;
+  return assignedToId === String(myId) || isFamilyTask;
+}
+
+// KIDS → kids + family
+if (isFamilyTask) return true;
+return kidIds.includes(assignedToId);
+
+    });
+
+    const withMs = list.map((tk: any) => {
+      const ms =
+        Number(tk?.createdAt ?? 0) ||
+        (tk?.created_at ? new Date(tk.created_at).getTime() : 0) ||
+        (tk?.inserted_at ? new Date(tk.inserted_at).getTime() : 0) ||
+        0;
+      return { tk, ms };
+    });
+
+    return withMs
+      .sort((a, b) => (b.ms ?? 0) - (a.ms ?? 0))
+      .slice(0, 3)
+      .map((x) => x.tk);
+  }, [tasks, scope, myId, kidIds]);
+
+
+  // --- Shopping: open count ---
+  const shoppingOpenCount = useMemo(() => {
+    const list = (items ?? []).filter((it: any) => !it?.bought);
+    return list.length;
+  }, [items]);
+
+  const shoppingPreview = useMemo(() => {
+    const list = (items ?? []).filter((it: any) => !it?.bought);
+    return list
+      .slice(0, 3)
+      .map((it: any) => ({
+        id: String(it?.id ?? `${it?.name ?? it?.title ?? it?.text ?? ""}-${Math.random()}`),
+        name: String(it?.name ?? it?.title ?? it?.text ?? "").trim(),
+      }))
+      .filter((x: any) => Boolean(x?.name));
+  }, [items]);
+
+  const segFamilyLabel = tr("planner.family", tr("planner.family", "Family"));
+  const segMeLabel = tr("common.me", tr("common.me", "Me"));
+  const segKidsLabel = tr("members.stats.kids", tr("members.stats.kids", "Kids"));
 
   return (
     <Screen noPadding>
-      <View style={{ flex: 1, width: "100%" }}>
-        <FlatList
-          data={rows}
-          keyExtractor={(r) => {
-            if (r.type === "hero") return "hero";
-            if (r.type === "section") return `s:${r.key}`;
-            return `t:${r.key}`;
-          }}
-          renderItem={renderRow}
-          contentContainerStyle={{ padding: 16, paddingBottom: 24 }}
-          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
-          showsVerticalScrollIndicator={false}
-        />
+      <ScrollView
+        contentContainerStyle={{ paddingBottom: 40 }}
+        showsVerticalScrollIndicator={false}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+      >
+        {/* HERO */}
+<View style={{ padding: 16 }}>
+  <View style={[styles.heroOuter, styles.heroShadow]}>
+    <View style={styles.heroCardClip}>
+      {/* soft playful background */}
+      <View pointerEvents="none" style={styles.heroDecor}>
+        <View style={styles.heroBubble1} />
+        <View style={styles.heroBubble2} />
+      </View>
 
-        <InfoSheet
-          visible={infoVisible}
-          title={infoTitle}
-          body={infoBody}
-          okLabel={tr("common.ok", "OK")}
-          onClose={() => setInfoVisible(false)}
+      <View style={styles.heroTopRow}>
+        <View style={styles.heroLeft}>
+          <Text style={[styles.heroTitle, TYPO.title]}>{tr("home.title", tr("home.title", tr("home.title", "Daily tasks")))}</Text>
+          <Text style={[styles.heroSub, TYPO.body]}>{tr("home.subtitle", "Planner, tasks, family & shopping — overview")}</Text>
+        </View>
+
+        <Image
+          source={HOME_HEADER_IMG}
+          style={styles.heroArt}
+          resizeMode="contain"
+          onError={(e) => console.log("HOME LOGO ERROR", e?.nativeEvent)}
         />
       </View>
+
+      {/* SEGMENT: Family | Me | Kids */}
+      <View style={styles.heroSegmentWrap}>
+        <PressableFilter active={scope === "family"} label={segFamilyLabel} onPress={() => setScope("family")} />
+        <PressableFilter active={scope === "me"} label={segMeLabel} onPress={() => setScope("me")} />
+        <PressableFilter active={scope === "kids"} label={segKidsLabel} onPress={() => setScope("kids")} />
+      </View>
+
+      <View style={styles.heroAccentBg}>
+        <View style={[styles.heroAccent, { backgroundColor: theme.colors.primary }]} />
+      </View>
+    </View>
+  </View>
+</View>
+
+<View style={{ paddingHorizontal: 16 }}>
+
+          {/* 1) PLANNER */}
+          <Card style={[styles.card, styles.cardShadow]}>
+            <View style={styles.cardAccent} />
+            <SectionHeader art={PLANNER_HEADER_IMG} title={tr("home.plannerToday", tr("home.plannerToday", "Planner — today"))} rightSlot={<Pill label={String(plannerToday.length)} />} />
+
+            <View style={styles.sectionDivider} />
+
+            {plannerLoading ? (
+              <View style={{ marginTop: 2 }}>
+                <SkeletonRow />
+                <SkeletonRow />
+                <SkeletonRow />
+              </View>
+            ) : plannerToday.length === 0 ? (
+              <View style={styles.inlineEmpty}>
+                <Text style={[styles.inlineEmptyTitle, TYPO.title]}>
+                  {scope === "me"
+                    ? tr("home.plannerEmptyMe", "Nothing planned today")
+                    : scope === "kids"
+                      ? tr("home.plannerEmptyKids", "Nothing planned for kids")
+                      : tr("home.plannerEmptyFamily", "Nothing planned today")}
+                </Text>
+                <Text style={[styles.inlineEmptySub, TYPO.body]}>
+                  {scope === "family"
+                    ? tr("home.plannerEmptyFamilySub", "Plan one small thing ✨")
+                    : tr("home.plannerEmptySub", "All clear 🙂")}
+                </Text>
+              </View>
+            ) : (
+              <View style={{ marginTop: 2 }}>
+                {plannerToday.map((p: any, idx: number) => {
+                  const timeLabel = formatTimeFromDigits(String(p.timeDigits ?? "")) || tr("home.noTime", "Any time");
+                  return (
+                    <View key={String(p.id)} style={[styles.plannerRow, idx !== 0 && styles.plannerRowDivider]}>
+                      <View style={styles.plannerRowLeft}>
+                        <Text style={[styles.plannerTitle, TYPO.body]} numberOfLines={1}>
+                          {String(p.title ?? "")}
+                        </Text>
+                      </View>
+
+                      <View style={styles.plannerRowRight}>
+                        <View style={styles.timePill}>
+                          <Ionicons name="time-outline" size={14} color={theme.colors.muted} />
+                          <Text style={[styles.timePillText, TYPO.body]}>{timeLabel}</Text>
+                        </View>
+                      </View>
+                    </View>
+                  );
+                })}
+              </View>
+            )}
+
+            {!AsyncStorage ? (
+              <Text style={[styles.noteText, TYPO.body]}>
+                {tr("planner.noStorage", "Note: AsyncStorage is not installed, so plans will reset when the app reloads.")}
+              </Text>
+            ) : null}
+
+            <CardMore label={viewMoreLabel} onPress={() => router.push("/(tabs)/planner")} />
+          </Card>
+
+          {/* 2) TASKS */}
+          <Card style={[styles.card, styles.cardShadow]}>
+            <View style={styles.cardAccent} />
+            <SectionHeader art={TASKS_HEADER_IMG} title={tr("home.tasksLatest", tr("home.tasksLatest", "Tasks — newest"))} rightSlot={<Pill label={String(latestTasks.length)} />} />
+
+            <View style={styles.sectionDivider} />
+
+            {tasksLoading ? (
+              <View style={{ marginTop: 2 }}>
+                <SkeletonRow />
+                <SkeletonRow />
+                <SkeletonRow />
+              </View>
+            ) : latestTasks.length === 0 ? (
+              <View style={styles.inlineEmpty}>
+                <Text style={[styles.inlineEmptyTitle, TYPO.title]}>
+                  {scope === "me"
+                    ? tr("home.tasksEmptyMe", "No tasks for you")
+                    : scope === "kids"
+                      ? tr("home.tasksEmptyKids", "Kids have no tasks")
+                      : tr("home.tasksEmptyFamily", "No open tasks")}
+                </Text>
+                <Text style={[styles.inlineEmptySub, TYPO.body]}>{tr("home.tasksEmptySub", "Looks clean. Keep it that way 😄")}</Text>
+              </View>
+            ) : (
+              <View style={{ marginTop: 2 }}>
+                {latestTasks.map((task: any, idx: number) => (
+                  <View key={String(task.id)} style={[styles.row, idx !== 0 && styles.rowDivider]}>
+                    <View style={styles.rowIcon}>
+                      <Ionicons name="checkbox" size={18} color={theme.colors.primary} />
+                    </View>
+
+                    <View style={{ flex: 1 }}>
+                      <Text style={[styles.rowTitle, TYPO.body]} numberOfLines={1}>
+                        {String(task.title ?? "")}
+                      </Text>
+                      {task?.dueAt ? (
+                        <Text style={[styles.rowMeta, TYPO.body]}>
+                          {tr("tasks.due", "Due")}:{" "}
+                          {new Date(task.dueAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                        </Text>
+                      ) : (
+                        <Text style={[styles.rowMeta, TYPO.body]}>{tr("tasks.noDue", "No due time")}</Text>
+                      )}
+                    </View>
+                  </View>
+                ))}
+              </View>
+            )}
+
+            <CardMore label={viewMoreLabel} onPress={() => router.push("/(tabs)/tasks")} />
+          </Card>
+
+          {/* 4) SHOPPING */}
+          <Card style={[styles.card, styles.cardShadow]}>
+            <View style={styles.cardAccent} />
+            <SectionHeader art={SHOPPING_HEADER_IMG} title={tr("home.shopping", tr("home.shopping", "Shopping"))} rightSlot={<Pill label={String(shoppingOpenCount)} />} />
+
+            <View style={styles.sectionDivider} />
+
+            {shoppingLoading ? (
+              <View style={{ marginTop: 2 }}>
+                <SkeletonRow />
+              </View>
+            ) : !inFamily ? (
+              <Text style={[styles.simpleText, TYPO.body]}>
+                {tr("home.noFamilyShopping", "Join or create a family to use shared shopping list.")}
+              </Text>
+            ) : shoppingOpenCount <= 0 ? (
+              <Text style={[styles.simpleText, TYPO.body]}>{tr("home.shoppingEmpty", "Shopping list is empty")}</Text>
+            ) : (
+              <View style={{ paddingVertical: 6 }}>
+                <Text style={[styles.simpleText, TYPO.body]}>
+                  {tr("home.shoppingCartCount", "You have {{count}} items in the cart", { count: shoppingOpenCount })}
+                </Text>
+
+                {shoppingPreview.length ? (
+                  <View style={{ marginTop: 6 }}>
+                    {shoppingPreview.map((it: any, idx: number) => (
+                      <View key={it.id} style={[styles.row, idx !== 0 && styles.rowDivider]}>
+                        <View style={styles.rowIcon}>
+                          <Ionicons name="cart-outline" size={18} color={theme.colors.primary} />
+                        </View>
+
+                        <View style={{ flex: 1 }}>
+                          <Text style={[styles.rowTitle, TYPO.body]} numberOfLines={1}>
+                            {it.name}
+                          </Text>
+                        </View>
+                      </View>
+                    ))}
+                  </View>
+                ) : null}
+              </View>
+            )}
+
+            <CardMore label={viewMoreLabel} onPress={() => router.push("/(tabs)/shopping")} />
+          </Card>
+        </View>
+      </ScrollView>
     </Screen>
   );
 }
 
-const PALETTE = {
-  text: "#0B1220",
-  muted: "#667085",
-  primary: "#2F6BFF",
-  card: "rgba(255,255,255,0.94)",
-  cardStrong: "rgba(255,255,255,0.96)",
-  border: "rgba(140,160,190,0.18)",
-  borderBlue: "rgba(47,107,255,0.30)",
-};
+const styles = StyleSheet.create({
+  card: { padding: 12, marginBottom: 12 },
+  cardAccent: { height: 4, width: "55%", borderRadius: 999, backgroundColor: "rgba(37, 99, 235, 0.18)", marginBottom: 10 },
 
-const FROST = {
-  bg: PALETTE.card,
-  bgStrong: PALETTE.cardStrong,
-  borderSoft: PALETTE.border,
-  shadow:
-    Platform.OS === "android"
-      ? { elevation: 5 }
-      : {
-          shadowColor: "#000",
-          shadowOpacity: 0.08,
-          shadowRadius: 18,
-          shadowOffset: { width: 0, height: 8 },
-        },
-};
-
-const styles: any = {
-  heroCard: {
+  heroOuter: {
     borderWidth: 1,
-    borderColor: "#e5e7eb",
-    backgroundColor: "#fff",
-    borderRadius: 22,
-    padding: 14,
-    overflow: "visible",
-    ...Platform.select({
-      android: { elevation: 1 },
-      ios: {
-        shadowColor: "#000",
-        shadowOpacity: 0.06,
-        shadowRadius: 14,
-        shadowOffset: { width: 0, height: 5 },
-      },
-      default: {},
-    }),
-  },
-
-  // Hero logo header (replaces old title + clock/date)
-  heroHeader: {
-    alignItems: "center",
-    justifyContent: "center",
-    paddingTop: 6,
-    paddingBottom: 10,
-  },
-  heroLogoWrap: {
-    marginTop: -45, // 👈 overlaps outside the card for a “wow” effect
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  heroLogo: {
-    width: 230,
-    height: 150,
-  },
-
-  headerRow: {
-    position: "relative",
-    minHeight: 44,
-  },
-  headerRight: {
-    position: "absolute",
-    top: 0,
-    right: 0,
-    alignItems: "flex-end",
-  },
-
-  brandTitle: {
-    fontSize: 28,
-    fontWeight: "900",
-    color: theme.colors.text,
-    letterSpacing: 0.8,
-  },
-  brandTagline: {
-    marginTop: 2,
-    fontSize: 12,
-    fontWeight: "800",
-    color: theme.colors.muted,
-  },
-
-  clockPill: {
-    alignSelf: "flex-end",
-    minWidth: 64,
-    borderWidth: 1,
-    borderColor: "#e5e7eb",
-    backgroundColor: "#fff",
-    borderRadius: 999,
-    paddingHorizontal: 12,
-    height: 34,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  clockText: {
-    fontSize: 14,
-    fontWeight: "900",
-    color: theme.colors.text,
-  },
-  dateTopRight: {
-    marginTop: 6,
-    fontSize: 12,
-    fontWeight: "800",
-    color: theme.colors.muted,
-    textAlign: "right",
-    alignSelf: "flex-end",
-  },
-
-  familyBadgeCenter: {
-    marginTop: 10,
-    alignItems: "center",
-  },
-  familyBadge: {
-    borderWidth: 1,
-    borderColor: "#e5e7eb",
-    backgroundColor: "#f8fafc",
-    borderRadius: 999,
-    paddingHorizontal: 10,
-    height: 30,
-    alignItems: "center",
-    justifyContent: "center",
-    maxWidth: 260,
-  },
-  familyBadgeText: {
-    fontSize: 12,
-    fontWeight: "900",
-    color: theme.colors.text,
-  },
-
-  segmentWrap: {
-    flexDirection: "row",
-    width: "100%",
-    borderRadius: 999,
-    borderWidth: 1,
-    borderColor: "#e5e7eb",
-    backgroundColor: "#f8fafc",
-    padding: 4,
-    gap: 6,
-  },
-  segmentBtn: {
-    flex: 1,
-    height: 34,
-    borderRadius: 999,
-    paddingHorizontal: 10,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  segmentOn: {
-    backgroundColor: (theme as any)?.colors?.primary ?? "#2563eb",
-  },
-  segmentOff: {
-    backgroundColor: "transparent",
-  },
-  segmentText: {
-    fontSize: 12,
-    fontWeight: "900",
-  },
-  segmentTextOn: {
-    color: "#fff",
-  },
-  segmentTextOff: {
-    color: theme.colors.text,
-    opacity: 0.9,
-  },
-
-  scopeRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-  },
-
-  hintRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: 10,
-  },
-
-  infoSlot: {
-    width: 28,
-    alignItems: "flex-end",
-    justifyContent: "center",
-  },
-
-  infoBtn: {
-    // Smaller + softer blue so it doesn't steal focus
-    height: 22,
-    width: 22,
-    borderRadius: 11,
-    borderWidth: 1,
-    borderColor: "#60A5FA",
-    backgroundColor: "#60A5FA",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  infoBtnText: {
-    fontSize: 11,
-    fontWeight: "800",
-    color: "#fff",
-    marginTop: -0.5,
-  },
-
-  infoBackdrop: {
-    flex: 1,
-    backgroundColor: "rgba(0,0,0,0.35)",
-    alignItems: "center",
-    justifyContent: "center",
-    padding: 16,
-  },
-  infoCard: {
-    width: "100%",
-    maxWidth: 420,
+    borderColor: theme.colors.border,
+    backgroundColor: theme.colors.card,
     borderRadius: 18,
-    borderWidth: 1,
-    borderColor: "#e5e7eb",
-    backgroundColor: "#fff",
+    overflow: "visible",
+  },
+  heroCardClip: {
+    borderRadius: 18,
+    overflow: "hidden",
+    backgroundColor: theme.colors.card,
     padding: 14,
   },
-  infoTitle: {
-    fontSize: 14,
-    fontWeight: "900",
-    color: theme.colors.text,
-  },
-  infoBody: {
-    marginTop: 8,
-    fontSize: 12,
-    fontWeight: "700",
-    color: theme.colors.muted,
-    lineHeight: 18,
-  },
-  infoOkBtn: {
-    height: 34,
-    borderRadius: 12,
-    paddingHorizontal: 14,
-    alignSelf: "flex-end",
-  },
-  infoOkText: {
-    fontSize: 12,
-    fontWeight: "900",
+  heroTopRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+
+heroDecor: {
+  position: "absolute",
+  left: -40,
+  right: -40,
+  top: -40,
+  bottom: -40,
+},
+heroBubble1: {
+  position: "absolute",
+  width: 220,
+  height: 220,
+  borderRadius: 999,
+  right: -110,
+  top: -120,
+  backgroundColor: "rgba(47,107,255,0.10)",
+},
+heroBubble2: {
+  position: "absolute",
+  width: 180,
+  height: 180,
+  borderRadius: 999,
+  left: -90,
+  bottom: -110,
+  backgroundColor: "rgba(255,199,0,0.12)",
+},
+
+heroSegmentWrap: {
+  flexDirection: "row",
+  gap: 8,
+  marginTop: 12,
+  padding: 5,
+  borderRadius: 16,
+  backgroundColor: "rgba(37, 99, 235, 0.08)",
+},
+
+  // Left text reserves space for the logo on the right
+  heroLeft: { flex: 1, minWidth: 0, paddingRight: 92 },
+
+  // Right logo (soft watermark)
+  heroArt: {
+    position: "absolute",
+    right: -6,
+    top: -55,
+    width: 140,
+    height: 140,
+    opacity: 0.82,
+    pointerEvents: "none",
   },
 
-  statsRow: {
-    flexDirection: "row",
-    gap: 10,
-  },
-  statBox: {
-    flex: 1,
-    borderWidth: 1,
-    borderColor: "#e5e7eb",
-    backgroundColor: "#f8fafc",
-    borderRadius: 16,
-    paddingVertical: 10,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  statBoxOn: {
-    borderColor: (theme as any)?.colors?.primary ?? "#2563eb",
-    backgroundColor: "#fff",
-  },
-  statBig: {
-    fontSize: 18,
-    fontWeight: "900",
-    color: theme.colors.text,
-  },
-  statBigOn: {
-    color: (theme as any)?.colors?.primary ?? "#2563eb",
-  },
-  statSmall: {
-    marginTop: 2,
-    fontSize: 12,
-    fontWeight: "800",
-    color: theme.colors.muted,
-  },
-  statSmallOn: {
-    color: theme.colors.text,
-    opacity: 0.9,
-  },
+  heroRow: { flexDirection: "row", alignItems: "flex-start" },
 
-  filterRow: {
-    marginTop: 10,
-    alignItems: "flex-start",
-  },
-  filterPill: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-    borderWidth: 1,
-    borderColor: "#e5e7eb",
-    backgroundColor: "#fff",
-    borderRadius: 999,
-    paddingLeft: 12,
-    paddingRight: 6,
-    height: 32,
-  },
-  filterText: {
-    fontSize: 12,
-    fontWeight: "900",
-    color: theme.colors.text,
-  },
-  filterClear: {
+    heroTitle: { fontSize: 22, lineHeight: 24, fontWeight: "900", color: theme.colors.text },
+  heroSub: { marginTop: 4, fontSize: 13, lineHeight: 16, fontWeight: "700", color: theme.colors.muted },
+
+  heroMetaRow: { flexDirection: "row", gap: 8, marginTop: 10 },
+  heroMetaPill: {
     height: 24,
-    width: 24,
-    borderRadius: 12,
+    paddingHorizontal: 10,
+    borderRadius: 999,
+    flexDirection: "row",
     alignItems: "center",
+    gap: 6,
     justifyContent: "center",
-    backgroundColor: "#f1f5f9",
+    backgroundColor: "rgba(0,0,0,0.05)",
     borderWidth: 1,
-    borderColor: "#e5e7eb",
+    borderColor: "rgba(0,0,0,0.08)",
   },
-  filterClearText: {
-    fontSize: 12,
-    fontWeight: "900",
-    color: theme.colors.muted,
-    marginTop: -1,
-  },
+  heroMetaDot: { width: 7, height: 7, borderRadius: 999, backgroundColor: theme.colors.primary },
+  heroMetaText: { fontSize: 12, fontWeight: "900", color: theme.colors.text },
 
   heroAccentBg: {
     position: "absolute",
@@ -1252,162 +784,214 @@ const styles: any = {
     height: 6,
     backgroundColor: "#f1f5f9",
   },
-  heroAccent: {
-    height: 6,
-    width: "52%",
-    borderTopRightRadius: 999,
-    borderBottomRightRadius: 999,
-    backgroundColor: (theme as any)?.colors?.primary ?? "#2563eb",
-  },
+  heroAccent: { height: 6, width: "55%", borderTopRightRadius: 999, borderBottomRightRadius: 999 },
 
-  sectionRow: {
+  segmentWrap: {
+    flexDirection: "row",
+    gap: 8,
+    marginTop: 12,
+    padding: 5,
+    borderRadius: 16,
+    backgroundColor: theme.colors.card,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+  },
+  segmentBtn: {
+    flex: 1,
+    height: 34,
+    borderRadius: 14,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    backgroundColor: theme.colors.card,
+  },
+  segmentText: { fontSize: 12, fontWeight: "900", color: theme.colors.text },
+
+  sectionHeaderRow: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
+    gap: 10,
+    marginBottom: 8,
+    paddingRight: 54, // leave room for floating art
+    position: "relative",
+    overflow: "visible",
   },
-  sectionTitle: {
-    fontSize: 15,
-    fontWeight: "900",
-    color: theme.colors.text,
-    letterSpacing: 0.2,
+  sectionDivider: {
+    marginTop: 6,
+    borderTopWidth: 1,
+    borderTopColor: "rgba(17,17,17,0.06)",
   },
-  sectionHint: {
-    marginTop: 2,
-    fontSize: 12,
-    fontWeight: "700",
-    color: theme.colors.muted,
+
+  cardFooter: {
+    flexDirection: "row",
+    justifyContent: "flex-end",
+    marginTop: 10,
   },
-  sectionPill: {
-    borderWidth: 1,
-    borderColor: "#fecaca",
-    backgroundColor: "#fff1f2",
-    borderRadius: 999,
-    paddingHorizontal: 10,
-    height: 28,
+  sectionHeaderLeft: { flexDirection: "row", alignItems: "center", gap: 8, flex: 1, minWidth: 0 },
+
+  sectionIcon: {
+    width: 30,
+    height: 30,
+    borderRadius: 12,
     alignItems: "center",
     justifyContent: "center",
+    backgroundColor: "rgba(37, 99, 235, 0.08)",
   },
-  sectionPillText: {
-    fontSize: 12,
+  sectionDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 999,
+    backgroundColor: "rgba(37, 99, 235, 0.55)",
+  },
+
+  // subtle "floating" header illustration
+  sectionArtFloat: {
+    position: "absolute",
+    right: 2,
+    top: -16,
+    width: 46,
+    height: 46,
+    opacity: 0.85,
+    pointerEvents: "none",
+  },
+
+  sectionTitle: { fontSize: 16, fontWeight: "900", color: theme.colors.text },
+  moreBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    alignSelf: "flex-end",
+    paddingVertical: 8,
+    paddingHorizontal: 10,
+    borderRadius: 12,
+  },
+  moreText: { fontSize: 12, fontWeight: "900", color: theme.colors.muted },
+
+  morePill: {
+    height: 28,
+    paddingHorizontal: 10,
+    borderRadius: 999,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    backgroundColor: "rgba(0,0,0,0.05)",
+    borderWidth: 1,
+    borderColor: "rgba(0,0,0,0.08)",
+  },
+  morePillText: { fontSize: 12, fontWeight: "900", color: theme.colors.muted },
+
+  pill: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingHorizontal: 10,
+    height: 24,
+    borderRadius: 999,
+    backgroundColor: "rgba(47,107,255,0.10)",
+    borderWidth: 1,
+    borderColor: "rgba(47,107,255,0.22)",
+  },
+  pillDot: { width: 6, height: 6, borderRadius: 99, backgroundColor: theme.colors.primary },
+  pillText: { fontSize: 12, fontWeight: "900", color: theme.colors.primary },
+
+  plannerRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingVertical: 10,
+  },
+  plannerRowDivider: {
+    borderTopWidth: 1,
+    borderTopColor: "rgba(0,0,0,0.06)",
+  },
+  plannerRowLeft: { flex: 1, minWidth: 0, paddingRight: 10 },
+  plannerRowRight: { alignItems: "flex-end" },
+  plannerTitle: { fontSize: 15, fontWeight: "900", color: theme.colors.text },
+  timePill: {
+    height: 28,
+    paddingHorizontal: 10,
+    borderRadius: 999,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    backgroundColor: "rgba(37, 99, 235, 0.08)",
+  },
+  timePillText: { fontSize: 12, fontWeight: "900", color: theme.colors.muted },
+
+  row: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    paddingVertical: 10,
+  },
+  rowDivider: {
+    borderTopWidth: 1,
+    borderTopColor: "rgba(17,17,17,0.06)",
+  },
+  rowIcon: {
+    width: 38,
+    height: 38,
+    borderRadius: 12,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: theme.colors.card,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+  },
+  rowTitle: { color: theme.colors.text, fontWeight: "900", fontSize: 14 },
+  rowMeta: { marginTop: 2, color: theme.colors.muted, fontWeight: "700", fontSize: 12 },
+
+  skelRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    paddingVertical: 10,
+  },
+  skelIcon: {
+    width: 38,
+    height: 38,
+    borderRadius: 12,
+    backgroundColor: "rgba(0,0,0,0.06)",
+    borderWidth: 1,
+    borderColor: "rgba(0,0,0,0.08)",
+  },
+  skelLine1: {
+    height: 12,
+    borderRadius: 8,
+    width: "72%",
+    backgroundColor: "rgba(0,0,0,0.06)",
+    borderWidth: 1,
+    borderColor: "rgba(0,0,0,0.08)",
+  },
+  skelLine2: {
+    marginTop: 6,
+    height: 10,
+    borderRadius: 8,
+    width: "48%",
+    backgroundColor: "rgba(0,0,0,0.06)",
+    borderWidth: 1,
+    borderColor: "rgba(0,0,0,0.08)",
+  },
+  noteText: { marginTop: 10, color: theme.colors.muted, fontWeight: "700", fontSize: 11 },
+
+  simpleText: { color: theme.colors.text, fontWeight: "800", paddingVertical: 6 },
+
+  inlineEmpty: {
+    paddingVertical: 10,
+    paddingHorizontal: 2,
+  },
+  inlineEmptyTitle: {
+    fontSize: 18,
     fontWeight: "900",
-    color: "#be123c",
+    color: theme.colors.text,
+    letterSpacing: 0.1,
   },
-taskCard: {
-  marginBottom: 12,
-  padding: 14,
-  borderWidth: 1,
-  borderColor: FROST.borderSoft,
-  backgroundColor: FROST.bg,
-  borderRadius: 22,
-  ...FROST.shadow,
-},
-taskRow: {
-  flexDirection: "row",
-  alignItems: "stretch",
-},
-statusBar: {
-  width: 5,
-  marginLeft: -14,
-  marginRight: 14,
-  marginTop: 12,
-  marginBottom: 12,
-  borderTopRightRadius: 4,
-  borderBottomRightRadius: 4,
-  opacity: 0.95,
-},
-taskContent: {
-  flex: 1,
-},
-taskHeader: {
-  flexDirection: "row",
-  alignItems: "flex-start",
-  justifyContent: "space-between",
-  gap: 12,
-},
-taskTitle: {
-  fontWeight: "800",
-  fontSize: 17,
-  color: PALETTE.text,
-  letterSpacing: -0.2,
-},
-taskMeta: {
-  color: PALETTE.muted,
-  fontWeight: "700",
-  fontSize: 12,
-},
+  inlineEmptySub: {
+    marginTop: 6,
+    color: theme.colors.muted,
+    fontWeight: "800",
+  },
 
-// Timeline (replaces status badge)
-tlWrap: {
-  alignSelf: "flex-start",
-  alignItems: "flex-end",
-  minWidth: 120,
-},
-tlRow: {
-  flexDirection: "row",
-  alignItems: "center",
-},
-tlDot: {
-  width: 10,
-  height: 10,
-  borderRadius: 999,
-  borderWidth: 2,
-},
-tlDotDone: {
-  backgroundColor: PALETTE.primary,
-  borderColor: PALETTE.primary,
-},
-tlDotActive: {
-  backgroundColor: "transparent",
-  borderColor: PALETTE.primary,
-},
-tlDotPending: {
-  backgroundColor: "transparent",
-  borderColor: PALETTE.border,
-},
-tlLine: {
-  height: 2,
-  width: 18,
-  marginHorizontal: 4,
-  borderRadius: 999,
-},
-tlLineDone: {
-  backgroundColor: PALETTE.primary,
-  opacity: 0.9,
-},
-tlLinePending: {
-  backgroundColor: PALETTE.border,
-  opacity: 0.9,
-},
-tlHint: {
-  marginTop: 4,
-  fontSize: 10,
-  fontWeight: "800",
-  color: PALETTE.muted,
-},
-
-actionsRow: {
-  marginTop: 12,
-  flexDirection: "row",
-  alignItems: "flex-start",
-  justifyContent: "space-between",
-  gap: 10,
-},
-actionsLeft: {
-  flex: 1,
-  flexDirection: "row",
-  flexWrap: "wrap",
-  gap: 8,
-  alignItems: "flex-start",
-},
-actionBtn: {
-  height: 34,
-  borderRadius: 14,
-  paddingHorizontal: 12,
-  minWidth: 86,
-  alignSelf: "flex-start",
-},
-actionBtnText: {
-  fontSize: 12,
-  fontWeight: "900",
-},
-};
+});

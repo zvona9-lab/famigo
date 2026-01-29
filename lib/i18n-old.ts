@@ -11,8 +11,28 @@ const en = {
     "home": "Home",
     "members": "Members",
     "tasks": "Tasks",
-    "settings": "Settings",
-    "shopping": "Shopping"
+    "shopping": "Shopping",
+    "settings": "Settings"
+  },
+  "onboarding": {
+    "profile": {
+      "title": "Set up your profile",
+      "subtitle": "This helps the family recognize who is who.",
+      "name": "Your name",
+      "role": "You are",
+      "gender": "Gender",
+      "male": "Male",
+      "female": "Female",
+      "autoAvatar": "Avatar will be set automatically"
+    },
+    "family": {
+      "title": "Join or create a family",
+      "subtitle": "You can join with a code or create a new family.",
+      "joinTitle": "Join existing family",
+      "joinSub": "Enter the family code you got from a parent.",
+      "createTitle": "Create a new family",
+      "createSub": "Pick a family name and invite others later."
+    }
   },
   "common": {
     "loading": "Loading...",
@@ -28,11 +48,27 @@ const en = {
     "all": "All",
     "on": "On",
     "off": "Off",
-    "success": "Success"
+    "remove": "Remove",
+    "rename": "Rename",
+    "success": "Success",
+    "back": "Back",
+    "create": "Create",
+    "join": "Join",
+    "continue": "Continue",
+    "male": "Male",
+    "female": "Female"
   },
   "settings": {
     "title": "Settings",
     "subtitle": "Family, language and profile",
+    "setup": {
+      "title": "Set up your account",
+      "step1": "1) Join or create a family",
+      "step2": "2) Then set your name in Settings → Family",
+      "whyName": "Your name is stored as a family member, so it becomes available after you join a family.",
+      "next": "Next step",
+      "setNameNow": "Please set your name so others can recognize you."
+    },
     "language": "Language",
     "languageHint": "Choose the interface language.",
     "languageNote": "This change applies to the whole app.",
@@ -52,8 +88,6 @@ const en = {
       "notInFamily": "You are not in a family.",
       "statusLine": "Family: {{name}} (Invite: {{code}})",
       "title": "Family",
-      "nextStepTitle": "Next step",
-      "nextStepBody": "Please set your name so others can recognize you.",
       "notInFamilyTitle": "No family yet"
     },
     "about": "About",
@@ -66,11 +100,10 @@ const en = {
       "editName": "Edit name",
       "copy": "Copy",
       "renameFamily": "Rename",
-      "setYourName": "Set your name",
+      "setName": "Set your name",
       "leaveFamily": "Leave family",
       "deleteFamily": "Delete family",
       "showInviteCode": "Show invite code",
-      "setName": "Set your name",
       "hideInviteCode": "Hide invite code",
       "createFamily": "Create family",
       "joinFamily": "Join family",
@@ -84,12 +117,17 @@ const en = {
     "labels": {
       "family": "Family",
       "inviteCode": "Invite code",
-      "yourName": "Your name",
       "myName": "Your name"
     },
     "notSet": "Not set",
-    "onlyMemberDeleteHint": "You can delete the family only when you are the only member.",
     "nameAfterJoin": "Join or create a family to set your name.",
+    "deleteFamily": {
+      "help": "You can delete the family only when you are the only member.",
+      "title": "Delete family",
+      "body": "This will permanently delete the family and all its data.",
+      "confirm": "Type DELETE to confirm.",
+      "deleted": "Family deleted."
+    },
     "joinFamily": {
       "help": "Enter an invite code from a family member.",
       "title": "Join family",
@@ -99,32 +137,18 @@ const en = {
     },
     "createFamily": {
       "title": "Create family",
-      "desc": "Create a new family and invite others.",
+      "desc": "Create a new family to start sharing tasks.",
       "placeholder": "Family name",
-      "nameRequired": "Enter a family name.",
+      "nameRequired": "Family name is required.",
       "created": "Family created."
-    },
-    "deleteFamily": {
-      "title": "Delete family",
-      "body": "This will delete the family and all its data. This cannot be undone.",
-      "confirm": "Delete",
-      "deleted": "Family deleted.",
-      "help": "You can delete the family only when you are the only member."
-    },
-    "setup": {
-      "title": "Set up your account",
-      "step1": "1) Join or create a family",
-      "step2": "2) Then set your name in Settings → Family",
-      "whyName": "Your name is stored as a family member, so it becomes available after you join a family.",
-      "next": "Next step",
-      "setNameNow": "Please set your name so others can recognize you."
     },
     "leaveFamily": {
       "title": "Leave family",
       "body": "Are you sure you want to leave the family?",
       "confirm": "Leave",
       "left": "You left the family."
-    }
+    },
+    "myProfile": "My profile"
   },
   "tasks": {
     "status": {
@@ -138,6 +162,20 @@ const en = {
       "active": "Active",
       "review": "Needs approval",
       "done": "Done"
+    },
+    "badge": {
+      "open": "Otvoreno",
+      "done": "Gotovo"
+    },
+    "action": {
+      "accept": "Prihvati",
+      "reject": "Odbij",
+      "take": "Preuzmi",
+      "doneAuto": "Gotovo"
+    },
+    "timelineHint": {
+      "assigned": "Assigned → Done → Approved",
+      "created": "Created → Done → Approved"
     },
     "hideDoneOn": "Hide done: ON",
     "hideDoneOff": "Hide done: OFF",
@@ -161,7 +199,19 @@ const en = {
     "reset": "Reset",
     "title": "Tasks",
     "heroSub": "Quick filters and overview",
-    "new": "+ New",
+    "newBtn": "+ New",
+    "new": {
+      "title": "Create a new task for a family member",
+      "placeholder": {
+        "title": "e.g. Take Luka to soccer practice",
+        "time": "e.g. 16:30"
+      },
+      "hint": {
+        "timeOptional": "Optional: set a due time to enable reminders."
+      },
+      "repeatEveryDays": "Repeat every",
+      "assignTo": "Who should do this?"
+    },
     "needsApproval": "Needs approval",
     "active": "Active",
     "done": "Done",
@@ -173,19 +223,31 @@ const en = {
       "requestDone": "Request done",
       "approve": "Approve",
       "reject": "Reject",
-      "unclaim": "Unclaim"
+      "unclaim": "Unclaim",
+      "illDoIt": "I'll do it",
+      "leave": "Leave",
+      "markDone": "Mark done",
+      "notDone": "Not done",
+      "accept": "Accept",
+      "take": "Take"
     },
     "newPrompt": "What can you do today?",
     "when": "When?",
+    "reminder": {
+      "label": "Reminder",
+      "requiresTime": "Set a time to enable reminders."
+    },
     "selectedDate": "Selected date",
     "dateNotSet": "—",
     "repeatEveryPlaceholder": "Repeat every ___ days (numbers only)",
+    "repeatDaysPlaceholder": "___",
     "dateInvalid": "Pick a valid date.",
     "timeInvalid": "Time must be HHMM (e.g. 1630).",
     "calendarMissing": "Calendar picker not installed. Enter DDMM; calendar is optional.",
     "assign": {
       "none": "Not assigned",
       "select": "Select",
+      "selectCta": "Select",
       "clear": "Clear selection"
     },
     "assignTo": "Assign to",
@@ -196,7 +258,7 @@ const en = {
       "auto": "Auto",
       "autoOff": "Auto (no approval):  OFF",
       "label": "Repeat",
-      "days": "Repeat every ___ days (numbers only)"
+      "days": "days"
     },
     "errors": {
       "saveFailed": "Save failed.",
@@ -210,8 +272,10 @@ const en = {
     "calendar": "Calendar",
     "tomorrow": "Tomorrow",
     "today": "Today",
-    "repeatFor": "Repeat tasks for",
-    "repeatDaysPlaceholder": "___"
+    "badge": {
+      "open": "Open",
+      "done": "Done"
+    }
   },
   "today": {
     "title": "Today",
@@ -240,58 +304,53 @@ const en = {
     "defaultChild": "Child",
     "role": {
       "parent": "Parent",
-      "child": "Child"
+      "child": "Child",
+      "mom": "Mom",
+      "dad": "Dad"
     },
     "defaultParent": "Parent",
     "stats": {
       "kids": "Kids",
       "parents": "Parents",
-      "todayDone": "Done today"
+      "done": "Done",
+      "family": "Family"
     },
     "doneToday": "Done today",
     "listTitle": "Members list",
     "noMembers": "No members yet.",
-    "filter": {
-      "all": "All",
-      "parents": "Parents",
-      "kids": "Kids"
-    },
-    "parents": "Parents",
-    "kids": "Kids",
-    "noFamilyTitle": "You are not in a family yet.",
-    "noFamilyBody": "Join or create a family in Settings → Family.",
-    "countLine": "{{n}} members",
-    "actions": {
-      "subtitle": "Edit member",
-      "roleTitle": "Role",
-      "rename": "Rename",
-      "remove": "Remove"
-    },
-    "rename": {
-      "title": "Rename",
-      "placeholder": "New name"
-    },
-    "lastParent": {
-      "cantChangeRole": "You cannot change the role of the last parent. Add another parent first.",
-      "cantRemove": "You cannot remove the last parent. Add another parent first.",
-      "notice": "This is the last parent, so you cannot change their role or remove them."
-    },
-    "remove": {
-      "title": "Remove member?",
-      "body": "Tasks remain, but the member is removed and any assignments to them are cleared."
-    },
-    "fallbackMember": "Member",
-    "changeOwnNameHint": "Change your own name in Settings → Family.",
-    "memberFallback": "Member",
+    "changeOwnNameHint": "Change your own name in Settings → Profile.",
     "editMember": "Edit member",
-    "roleTitle": "Role",
+    "hello": "Hello",
+    "lastParentCantChangeRole": "You cannot change the role of the last parent. Add another parent first.",
+    "lastParentCantRemove": "You cannot remove the last parent. Add another parent first.",
     "lastParentNotice": "This is the last parent, so you cannot change their role or remove them.",
-    "removeTitle": "Remove member?",
+    "memberFallback": "Member",
+    "newNamePlaceholder": "New name",
+    "noFamilyBody": "Join/create a family in Settings → Family.",
+    "noFamilyTitle": "You are not in a family yet.",
+    "overview": "Here's an overview of your family activities.",
     "removeBody": "Tasks remain, but the member is removed and any assignments to them are cleared.",
-    "count": "{{n}} members",
-    "newNamePlaceholder": "New name"
+    "removeTitle": "Remove member?",
+    "roleTitle": "Role",
+    "parent": "Parent",
+    "child": "Child",
+    "editHintLongPress": "Tip: Long press a member to edit."
   },
   "auth": {
+    "tagline": "Family tasks, simple",
+    "title": "Sign in",
+    "registerTitle": "Create account",
+    "email": "Email",
+    "password": "Password",
+    "confirmPassword": "Confirm password",
+    "togglePassword": "Show or hide password",
+    "placeholders": {
+      "email": "email@example.com",
+      "password": "••••••••",
+      "confirmPassword": "••••••••"
+    },
+    "login": "Login",
+    "register": "Register",
     "missingUid": "You are not signed in (member id missing).",
     "invalidEmail": "Enter a valid email.",
     "magicLinkSent": "Check your email for the sign-in link.",
@@ -331,90 +390,108 @@ const en = {
       "shampoo": "Shampoo",
       "dishSoap": "Dish soap"
     },
-    "bought7days": "Bought (7 days)",
     "bought7d": "Bought (7 days)",
-    "bought": "Bought",
-    "boughtEmptyTitle": "No recent purchases",
-    "boughtEmptyBody": "Items bought in the last 7 days will show here.",
     "addedBy": "Added by",
     "addedAt": "Added",
-    "boughtWhen": "Bought"
+    "bought": "Bought",
+    "boughtWhen": "Bought",
+    "boughtEmptyTitle": "No recent purchases",
+    "boughtEmptyBody": "Items you mark as bought will appear here for 7 days.",
+    "goShop": "Go shop",
+    "sendTitle": "Send list",
+    "sendPick": "Choose who is going shopping.",
+    "sendEmpty": "The list is empty.",
+    "sendHeader": "Who is going shopping?",
+    "sendHint": "Send the whole list as one notification (no spam).",
+    "sentTitle": "Sent",
+    "sentBody": "Shopping list notification was sent."
   },
   "home": {
-    "anytimeHint": "No due date",
-    "scope": {
-      "family": "Family",
-      "kids": "Kids",
-      "me": "Me"
+    "title": "Daily tasks",
+    "subtitle": "Quick overview and focus",
+    "plannerToday": "Planner — today",
+    "tasksLatest": "Tasks — newest",
+    "shopping": "Shopping",
+    "shoppingCartCount": "You have {{count}} items in the cart",
+    "viewMore": "View more",
+    "noFamilyShopping": "Join or create a family to use the shared shopping list.",
+    "noTime": "Any time",
+    "shoppingEmpty": "Shopping list is empty",
+    "plannerEmptyMe": "Nothing planned today",
+    "plannerEmptyKids": "Nothing planned for kids",
+    "plannerEmptyFamily": "Nothing planned today",
+    "plannerEmptyFamilySub": "Plan one small thing ✨",
+    "plannerEmptySub": "All clear 🙂",
+    "tasksEmptyMe": "No tasks for you",
+    "tasksEmptyKids": "Kids have no tasks",
+    "tasksEmptyFamily": "No open tasks",
+    "tasksEmptySub": "Looks clean. Keep it that way 😄",
+  },
+
+
+  "planner": {
+    "title": "Planner",
+    "subtitle": "Your simple daily plan (private or shared).",
+    "selectedDay": "Selected",
+    "hintPickDay": "Pick a day on the calendar, then tap + New",
+    "newBtn": "+ New",
+    "newTitle": "New plan",
+    "editTitle": "Edit plan",
+    "placeholder": {
+      "title": "e.g. Doctor, pay bills, call grandma"
     },
-    "stats": {
-      "active": "Active",
-      "review": "Needs approval",
-      "done": "Done"
+    "timeLabel": "Time (optional)",
+    "timePlaceholder": "HHMM (e.g. 1630)",
+    "anytime": "Any",
+    "for": "For",
+    "shared": "Shared",
+    "forWho": "For who?",
+    "family": "Family",
+    "someone": "Someone",
+    "assigned": {
+      "all": "Family",
+      "some": "Selected"
     },
-    "doneHint": "Recently completed",
-    "emptyTitle": "No tasks",
-    "reviewTitle": "Needs approval",
-    "todayHint": "Focus",
-    "anytimeTitle": "Anytime",
-    "filterPrefix": "Filter",
-    "emptySubtitle": "Add tasks to get started.",
-    "doneTitle": "Done",
-    "familyPrefix": "Family",
-    "reviewHint": "Waiting for your decision",
-    "badge": {
-      "attention": "ATTN"
-    },
-    "reviewHintChild": "Waiting for parent",
-    "todayTitle": "Today",
-    "tagline": "Family tasks made simple",
-    "upcomingHint": "Next 7 days",
-    "upcomingTitle": "Upcoming",
-    "subtitle": "Quick overview",
-    "status": {
-      "open": "Open"
-    },
-    "tabAll": "All",
-    "tabKids": "Kids",
-    "tabMe": "Me",
-    "brandTitle": "FamiGo",
-    "scopeHint": {
-      "me": "Tasks that are for you",
-      "kids": "Tasks for all kids",
-      "family": "All family tasks"
-    },
-    "info": {
-      "scope": {
-        "title": "Views",
-        "body": "Choose whose tasks to show: Family, Kids, or Me."
-      },
-      "review": {
-        "title": "Waiting for approval",
-        "body": {
-          "parent": "Approve or reject tasks requested as done.",
-          "child": "When you request done, a parent needs to approve it."
-        }
-      },
-      "actions": {
-        "title": "Buttons",
-        "open": "Claim — take the task for yourself.",
-        "claimed": "Request done — ask a parent to approve completion.",
-        "review": {
-          "parent": "Approve / Reject — decide if the task is done.",
-          "child": "Waiting — a parent will approve or reject."
-        }
-      }
-    }
+    "someHint": "Tip: pick one or more members. (Long-press items to delete)",
+    "noFamilyHint": "Tip: join a family to share a plan with a member.",
+    "noStorage": "Note: AsyncStorage is not installed, so plans will reset when the app reloads.",
+    "calendarMissing": "Calendar component is not installed. If you want this month view, install react-native-calendars.",
+    "emptyTitle": "No plans yet",
+    "emptyBody": "Tap + New and add your first plan for this day.",
+    "titleRequired": "Title is required.",
+    "timeInvalid": "Time must be HH:MM (e.g. 1630).",
+    "pickSomeone": "Choose at least one member.",
+    "deleteConfirm": "Delete this item?"
   }
 };
 
 const hr = {
   "tabs": {
-    "home": "Danas",
+    "home": "Početna",
     "members": "Članovi",
     "tasks": "Zadaci",
-    "settings": "Postavke",
-    "shopping": "Kupovina"
+    "shopping": "Kupovina",
+    "settings": "Postavke"
+  },
+  "onboarding": {
+    "profile": {
+      "title": "Postavi svoj profil",
+      "subtitle": "Ovo pomaže obitelji da prepozna tko je tko.",
+      "name": "Ime",
+      "role": "Ti si",
+      "gender": "Spol",
+      "male": "Muško",
+      "female": "Žensko",
+      "autoAvatar": "Avatar će se postaviti automatski"
+    },
+    "family": {
+      "title": "Pridruži se ili kreiraj obitelj",
+      "subtitle": "Možeš se pridružiti kodom ili kreirati novu obitelj.",
+      "joinTitle": "Pridruži se postojećoj obitelji",
+      "joinSub": "Upiši obiteljski kod koji si dobio od roditelja.",
+      "createTitle": "Kreiraj novu obitelj",
+      "createSub": "Odaberi naziv obitelji i kasnije pozovi ostale."
+    }
   },
   "common": {
     "loading": "Učitavam...",
@@ -426,15 +503,32 @@ const hr = {
     "copied": "Kopirano.",
     "copyFailed": "Ne mogu kopirati.",
     "all": "Sve",
+    "on": "Uklj",
+    "off": "Isklj",
     "info": "Info",
     "me": "Ja",
-    "on": "UKLJ",
-    "off": "ISKLJ",
-    "success": "Uspjeh"
+    "remove": "Ukloni",
+    "rename": "Preimenuj",
+    "success": "Uspjeh",
+    "back": "Natrag",
+    "create": "Kreiraj",
+    "join": "Pridruži se",
+    "continue": "Nastavi",
+    "male": "Muško",
+    "female": "Žensko"
+
   },
   "settings": {
     "title": "Postavke",
     "subtitle": "Obitelj, jezik i profil",
+    "setup": {
+      "title": "Postavi račun",
+      "step1": "1) Uđi u obitelj ili napravi novu",
+      "step2": "2) Zatim postavi ime u Postavke → Obitelj",
+      "whyName": "Tvoje ime se sprema kao član obitelji, pa postaje dostupno nakon što uđeš u obitelj.",
+      "next": "Sljedeći korak",
+      "setNameNow": "Postavi svoje ime kako bi te drugi mogli prepoznati."
+    },
     "language": "Jezik",
     "languageHint": "Odaberi jezik sučelja.",
     "languageNote": "Ova promjena vrijedi za cijelu aplikaciju.",
@@ -454,8 +548,6 @@ const hr = {
       "notInFamily": "Nisi u obitelji.",
       "statusLine": "Obitelj: {{name}} (Poziv: {{code}})",
       "title": "Obitelj",
-      "nextStepTitle": "Sljedeći korak",
-      "nextStepBody": "Postavi svoje ime kako bi te drugi mogli prepoznati.",
       "notInFamilyTitle": "Još nema obitelji"
     },
     "about": "O aplikaciji",
@@ -468,14 +560,13 @@ const hr = {
       "editName": "Uredi ime",
       "copy": "Kopiraj",
       "renameFamily": "Preimenuj",
-      "setYourName": "Postavi ime",
+      "setName": "Postavi ime",
       "leaveFamily": "Napusti obitelj",
       "deleteFamily": "Obriši obitelj",
       "showInviteCode": "Prikaži pozivni kod",
-      "setName": "Postavi ime",
       "hideInviteCode": "Sakrij pozivni kod",
       "createFamily": "Napravi obitelj",
-      "joinFamily": "Pridruži se obitelji",
+      "joinFamily": "Uđi u obitelj",
       "join": "Pridruži se"
     },
     "msg": {
@@ -486,47 +577,38 @@ const hr = {
     "labels": {
       "family": "Obitelj",
       "inviteCode": "Pozivni kod",
-      "yourName": "Tvoje ime",
       "myName": "Tvoje ime"
     },
     "notSet": "Nije postavljeno",
-    "onlyMemberDeleteHint": "Obitelj možeš obrisati samo ako si jedini član.",
-    "nameAfterJoin": "Pridruži se ili napravi obitelj da postaviš ime.",
+    "nameAfterJoin": "Uđi ili napravi obitelj da postaviš ime.",
+    "deleteFamily": {
+      "help": "Obitelj možeš obrisati samo ako si jedini član.",
+      "title": "Obriši obitelj",
+      "body": "Ovo će trajno obrisati obitelj i sve podatke.",
+      "confirm": "Upiši DELETE za potvrdu.",
+      "deleted": "Obitelj je obrisana."
+    },
     "joinFamily": {
-      "help": "Upiši pozivni kod koji ti je poslao član obitelji.",
+      "help": "Upiši pozivni kod od člana obitelji.",
       "title": "Pridruži se obitelji",
       "placeholder": "Pozivni kod",
       "invalidCode": "Upiši pozivni kod.",
       "joined": "Sada si u obitelji."
     },
     "createFamily": {
-      "title": "Napravi obitelj",
-      "desc": "Napravi novu obitelj i pozovi ostale.",
+      "title": "Kreiraj obitelj",
+      "desc": "Kreiraj novu obitelj i počni dijeliti zadatke.",
       "placeholder": "Naziv obitelji",
-      "nameRequired": "Upiši naziv obitelji.",
+      "nameRequired": "Naziv obitelji je obavezan.",
       "created": "Obitelj je kreirana."
-    },
-    "deleteFamily": {
-      "title": "Obriši obitelj",
-      "body": "Ovo će obrisati obitelj i sve podatke. Ne može se poništiti.",
-      "confirm": "Obriši",
-      "deleted": "Obitelj obrisana.",
-      "help": "Obitelj možeš obrisati samo ako si jedini član."
-    },
-    "setup": {
-      "title": "Postavi račun",
-      "step1": "1) Pridruži se ili napravi obitelj",
-      "step2": "2) Zatim postavi ime u Postavke → Obitelj",
-      "whyName": "Ime se sprema kao član obitelji, pa je dostupno nakon što se pridružiš obitelji.",
-      "next": "Sljedeći korak",
-      "setNameNow": "Postavi svoje ime kako bi te drugi mogli prepoznati."
     },
     "leaveFamily": {
       "title": "Napusti obitelj",
       "body": "Jesi li siguran/na da želiš napustiti obitelj?",
       "confirm": "Napusti",
       "left": "Napustio/la si obitelj."
-    }
+    },
+    "myProfile": "Moj profil"
   },
   "tasks": {
     "status": {
@@ -541,6 +623,10 @@ const hr = {
       "review": "Za potvrdu",
       "done": "Gotovo"
     },
+    "timelineHint": {
+      "assigned": "Dodijeljeno → Gotovo → Odobreno",
+      "created": "Kreirano → Gotovo → Odobreno"
+    },
     "hideDoneOn": "Sakrij gotovo: UKLJ",
     "hideDoneOff": "Sakrij gotovo: ISKLJ",
     "emptyTitle": "Nema zadataka",
@@ -551,7 +637,7 @@ const hr = {
     "newTitle": "Novi zadatak",
     "titlePlaceholder": "npr. Pokupi djecu",
     "timePlaceholder": "Upiši (HHMM) npr. 1630",
-    "assignedTo": "Dodijeli",
+    "assignedTo": "Dodijeljeno osobi",
     "noAssignee": "Svi",
     "titleRequired": "Naslov je obavezan.",
     "deleteConfirm": "Obrisati ovaj zadatak?",
@@ -563,7 +649,19 @@ const hr = {
     "reset": "Resetiraj",
     "title": "Zadaci",
     "heroSub": "Brzi filteri i pregled",
-    "new": "+ Novi",
+    "newBtn": "+ Novi",
+    "new": {
+      "title": "Kreiraj novi zadatak za člana obitelji",
+      "placeholder": {
+        "title": "npr. Odvedi Luku na trening",
+        "time": "npr. 16:30"
+      },
+      "hint": {
+        "timeOptional": "Kada zadatak treba biti obavljen."
+      },
+      "repeatEveryDays": "Ponavljaj svakih",
+      "assignTo": "Tko to radi?"
+    },
     "needsApproval": "Za potvrdu",
     "active": "Aktivno",
     "done": "Gotovo",
@@ -575,13 +673,24 @@ const hr = {
       "requestDone": "Za potvrdu",
       "approve": "Odobri",
       "reject": "Odbij",
-      "unclaim": "Vrati"
+      "unclaim": "Vrati",
+      "illDoIt": "Ja ću",
+      "leave": "Odustani",
+      "markDone": "Označi gotovo",
+      "notDone": "Nije gotovo",
+      "accept": "Prihvati",
+      "take": "Preuzmi"
     },
     "newPrompt": "Što možeš danas napraviti?",
     "when": "Kada?",
+    "reminder": {
+      "label": "Podsjetnik",
+      "requiresTime": "Postavi vrijeme da uključiš podsjetnike."
+    },
     "selectedDate": "Odabrani datum",
     "dateNotSet": "—",
     "repeatEveryPlaceholder": "Ponavljaj svakih ___ dana (samo broj)",
+    "repeatDaysPlaceholder": "___",
     "dateInvalid": "Odaberi ispravan datum.",
     "timeInvalid": "Vrijeme mora biti HHMM (npr. 1630).",
     "calendarMissing": "Kalendar nije instaliran. Unesi DDMM; kalendar je opcionalan.",
@@ -610,10 +719,13 @@ const hr = {
     "assign": {
       "none": "Nije dodijeljeno",
       "select": "Odaberi",
+      "selectCta": "Odaberi",
       "clear": "Očisti odabir"
     },
-    "repeatFor": "Ponavljaj zadatak",
-    "repeatDaysPlaceholder": "___"
+    "badge": {
+      "open": "Otvoreno",
+      "done": "Gotovo"
+    }
   },
   "today": {
     "title": "Danas",
@@ -642,7 +754,9 @@ const hr = {
     "filter": {
       "all": "Sve",
       "kids": "Djeca",
-      "parents": "Roditelji"
+      "parents": "Roditelji",
+      "parent": "Roditelj",
+      "child": "Dijete"
     },
     "kids": "Djeca",
     "listTitle": "Popis članova",
@@ -651,49 +765,75 @@ const hr = {
     "stats": {
       "parents": "Roditelji",
       "kids": "Djeca",
-      "todayDone": "Danas riješeno"
+      "todayDone": "Danas riješeno",
+      "done": "Gotovo",
+      "family": "Obitelj"
     },
     "defaultParent": "Roditelj",
     "defaultChild": "Dijete",
     "role": {
       "parent": "Roditelj",
-      "child": "Dijete"
+      "child": "Dijete",
+      "mom": "Mama",
+      "dad": "Tata"
     },
     "doneToday": "Danas riješeno",
-    "noFamilyTitle": "Nisi još u obitelji.",
-    "noFamilyBody": "Uđi u obitelj u Postavke → Obitelj.",
-    "countLine": "{{n}} članova",
-    "actions": {
-      "subtitle": "Uredi člana",
-      "roleTitle": "Uloga",
-      "rename": "Preimenuj",
-      "remove": "Obriši"
-    },
-    "rename": {
-      "title": "Preimenuj",
-      "placeholder": "Novo ime"
-    },
-    "lastParent": {
-      "cantChangeRole": "Ne možeš promijeniti ulogu zadnjeg roditelja. Dodaj još jednog roditelja pa pokušaj opet.",
-      "cantRemove": "Ne možeš obrisati zadnjeg roditelja. Dodaj još jednog roditelja pa pokušaj opet.",
-      "notice": "Ovo je zadnji roditelj pa mu ne možeš promijeniti ulogu niti ga obrisati."
-    },
-    "remove": {
-      "title": "Obrisati člana?",
-      "body": "Zadaci ostaju, ali se uklanja član i sve dodjele tom članu."
-    },
-    "fallbackMember": "Član",
-    "changeOwnNameHint": "Svoje ime mijenjaš u Postavke → Obitelj.",
-    "memberFallback": "Član",
+    "changeOwnNameHint": "Promijeni svoje ime u Postavke → Profil.",
     "editMember": "Uredi člana",
+    "hello": "Bok",
+    "lastParentCantChangeRole": "Ne možeš promijeniti ulogu posljednjeg roditelja. Prvo dodaj još jednog roditelja.",
+    "lastParentCantRemove": "Ne možeš ukloniti posljednjeg roditelja. Prvo dodaj još jednog roditelja.",
+    "lastParentNotice": "Ovo je posljednji roditelj, zato mu ne možeš promijeniti ulogu niti ga ukloniti.",
+    "memberFallback": "Član",
+    "newNamePlaceholder": "Novo ime",
+    "noFamilyBody": "Pridruži se/kreiraj obitelj u Postavke → Obitelj.",
+    "noFamilyTitle": "Još nisi u obitelji.",
+    "overview": "Evo pregleda obiteljskih aktivnosti.",
+    "removeBody": "Zadaci ostaju, ali član se uklanja i sve dodjele njemu se brišu.",
+    "removeTitle": "Ukloniti člana?",
     "roleTitle": "Uloga",
-    "lastParentNotice": "Ovo je zadnji roditelj pa mu ne možeš promijeniti ulogu niti ga obrisati.",
-    "removeTitle": "Obrisati člana?",
-    "removeBody": "Zadaci ostaju, ali se uklanja član i sve dodjele tom članu.",
-    "count": "{{n}} članova",
-    "newNamePlaceholder": "Novo ime"
+    "parent": "Roditelj",
+    "child": "Dijete",
+    "editHintLongPress": "Savjet: Dugo pritisni člana za uređivanje."
   },
   "auth": {
+    "tagline": "Obiteljski zadaci, jednostavno",
+    "title": "Prijava",
+    "registerTitle": "Izradi račun",
+    "email": "Email",
+    "password": "Lozinka",
+    "confirmPassword": "Potvrdi lozinku",
+    "togglePassword": "Prikaži ili sakrij lozinku",
+    "placeholders": {
+      "email": "ime@email.com",
+      "password": "••••••••",
+      "confirmPassword": "••••••••"
+    },
+    "login": "Prijava",
+    "register": "Registracija",
+    "passwordLoginBtn": "Prijavi se",
+    "registerBtn": "Izradi račun",
+    "forgotPasswordBtn": "Zaboravljena lozinka?",
+    "sendMagicLinkBtn": "Pošalji magic link",
+    "noAccount": "Nemaš račun?",
+    "createAccount": "Izradi ga",
+    "haveAccount": "Već imaš račun?",
+    "backToLogin": "Prijava",
+    "alerts": {
+      "missingEmailPasswordBody": "Upiši email i lozinku.",
+      "missingEmailBody": "Upiši svoj email.",
+      "missingRegisterBody": "Upiši email i oba polja lozinke.",
+      "weakPasswordBody": "Lozinka mora imati barem 6 znakova.",
+      "passwordMismatchBody": "Lozinke se ne podudaraju.",
+      "loginErrorTitle": "Greška pri prijavi",
+      "resetSentBody": "Poslali smo ti email s linkom za postavljanje nove lozinke.",
+      "resetErrorTitle": "Greška pri resetu",
+      "magicLinkSentBody": "Poslali smo magic link na tvoj email.",
+      "magicLinkErrorTitle": "Greška magic linka",
+      "registerConfirmEmailBody": "Račun je izrađen. Potvrdi email preko linka koji smo poslali, pa se prijavi.",
+      "registerOkBody": "Račun je izrađen. Sada se možeš prijaviti.",
+      "registerErrorTitle": "Greška pri registraciji"
+    },
     "missingUid": "Nisi prijavljen (nedostaje ID člana).",
     "invalidEmail": "Upiši ispravan email.",
     "magicLinkSent": "Provjeri email za link za prijavu.",
@@ -733,80 +873,78 @@ const hr = {
       "shampoo": "Šampon",
       "dishSoap": "Deterdžent za suđe"
     },
-    "bought7days": "Kupljeno (7 dana)",
     "bought7d": "Kupljeno (7 dana)",
-    "bought": "Kupljeno",
-    "boughtEmptyTitle": "Nema nedavnih kupovina",
-    "boughtEmptyBody": "Stavke kupljene u zadnjih 7 dana prikazat će se ovdje.",
-    "addedBy": "Dodao/la",
+    "addedBy": "Dodao",
     "addedAt": "Dodano",
-    "boughtWhen": "Kupljeno"
+    "bought": "Kupljeno",
+    "boughtWhen": "Kupljeno",
+    "boughtEmptyTitle": "Nema nedavnih kupnji",
+    "boughtEmptyBody": "Stavke koje označiš kao kupljene bit će ovdje vidljive 7 dana.",
+    "goShop": "Kreni u kupnju",
+    "sendTitle": "Pošalji popis",
+    "sendPick": "Odaberi tko ide u kupnju.",
+    "sendEmpty": "Popis je prazan.",
+    "sendHeader": "Tko ide u kupnju?",
+    "sendHint": "Pošalji cijeli popis kao jednu notifikaciju (bez spama).",
+    "sentTitle": "Poslano",
+    "sentBody": "Notifikacija s popisom za kupnju je poslana."
   },
   "home": {
-    "anytimeTitle": "Bilo kada",
-    "anytimeHint": "Bez roka",
-    "badge": {
-      "attention": "PAŽNJA"
-    },
-    "doneTitle": "Riješeno",
-    "doneHint": "Nedavno završeno",
-    "emptyTitle": "Nema zadataka",
-    "emptySubtitle": "Dodaj zadatke i organiziraj dan.",
-    "familyPrefix": "Obitelj",
-    "filterPrefix": "Filter",
-    "reviewTitle": "Za potvrdu",
-    "reviewHint": "Čeka tvoju odluku",
-    "reviewHintChild": "Čeka roditelja",
-    "scope": {
-      "family": "Obitelj",
-      "kids": "Djeca",
-      "me": "Ja"
-    },
-    "status": {
-      "open": "Otvoren"
-    },
+    "title": "Dnevne obaveze",
     "subtitle": "Brzi pregled i fokus",
-    "tabAll": "Sve",
-    "tabKids": "Djeca",
-    "tabMe": "Ja",
-    "tagline": "Obiteljski zadaci, jednostavno",
-    "todayHint": "Fokus",
-    "todayTitle": "Danas",
-    "upcomingHint": "Sljedećih 7 dana",
-    "upcomingTitle": "Nadolazeće",
-    "stats": {
-      "active": "Aktivno",
-      "review": "Za potvrdu",
-      "done": "Riješeno"
+    "plannerToday": "Planer — danas",
+    "tasksLatest": "Zadaci — najnoviji",
+    "shopping": "Kupovina",
+    "shoppingCartCount": "Imaš {{count}} stavki u košarici",
+    "viewMore": "Vidi više",
+    "noFamilyShopping": "Pridruži se ili kreiraj obitelj za zajedničku listu kupovine.",
+    "noTime": "Bilo kada",
+    "shoppingEmpty": "Lista kupovine je prazna",
+    "plannerEmptyMe": "Danas nema planova",
+    "plannerEmptyKids": "Nema planova za djecu",
+    "plannerEmptyFamily": "Danas nema planova",
+    "plannerEmptyFamilySub": "Isplaniraj jednu sitnicu ✨",
+    "plannerEmptySub": "Sve je mirno 🙂",
+    "tasksEmptyMe": "Nema zadataka za tebe",
+    "tasksEmptyKids": "Djeca nemaju zadataka",
+    "tasksEmptyFamily": "Nema otvorenih zadataka",
+    "tasksEmptySub": "Sve je čisto. Tako i ostani 😄",
+  },
+
+
+  "planner": {
+    "title": "Planer",
+    "subtitle": "Tvoj jednostavan dnevni plan (privatno ili dijeljeno).",
+    "selectedDay": "Odabrano",
+    "hintPickDay": "Odaberi dan na kalendaru, zatim dodirni + Novo",
+    "newBtn": "+ Novo",
+    "newTitle": "Novi plan",
+    "editTitle": "Uredi plan",
+    "placeholder": {
+      "title": "npr. doktor, platiti račune, nazvati baku"
     },
-    "brandTitle": "FamiGo",
-    "scopeHint": {
-      "me": "Zadaci koji su za tebe",
-      "kids": "Zadaci za svu djecu",
-      "family": "Svi obiteljski zadaci"
+    "timeLabel": "Vrijeme (opcionalno)",
+    "timePlaceholder": "HHMM (npr. 1630)",
+    "anytime": "Bilo kad",
+    "for": "Za",
+    "shared": "Dijeljeno",
+    "forWho": "Za koga?",
+    "family": "Obitelj",
+    "someone": "Netko",
+    "assigned": {
+      "all": "Obitelj",
+      "some": "Odabrano"
     },
-    "info": {
-      "scope": {
-        "title": "Prikazi",
-        "body": "Odaberi čije zadatke prikazati: Obitelj, Djeca ili Ja."
-      },
-      "review": {
-        "title": "Čeka potvrdu",
-        "body": {
-          "parent": "Odobri ili odbij zadatke za koje je zatražena potvrda.",
-          "child": "Kad zatražiš potvrdu, roditelj to treba odobriti."
-        }
-      },
-      "actions": {
-        "title": "Gumbi",
-        "open": "Preuzmi — uzmi zadatak za sebe.",
-        "claimed": "Traži potvrdu — zatraži od roditelja da odobri završetak.",
-        "review": {
-          "parent": "Odobri / Odbij — odluči je li zadatak gotov.",
-          "child": "Čekanje — roditelj će odobriti ili odbiti."
-        }
-      }
-    }
+    "someHint": "Savjet: odaberi jednog ili više članova. (Dugi pritisak briše)",
+    "noFamilyHint": "Savjet: pridruži se obitelji kako bi dijelio plan s članom.",
+    "noStorage": "Napomena: AsyncStorage nije instaliran pa će se planovi resetirati kad se aplikacija ponovno učita.",
+    "calendarMissing": "Komponenta kalendara nije instalirana. Ako želiš mjesečni prikaz, instaliraj react-native-calendars.",
+    "emptyTitle": "Još nema planova",
+    "emptyBody": "Dodirni + Novo i dodaj prvi plan za ovaj dan.",
+    "titleRequired": "Naslov je obavezan.",
+    "timeInvalid": "Vrijeme mora biti HH:MM (npr. 1630).",
+    "pickSomeone": "Odaberi barem jednog člana.",
+    "deleteConfirm": "Obrisati ovu stavku?"
   }
 };
 
@@ -815,8 +953,28 @@ const it = {
     "home": "Oggi",
     "members": "Membri",
     "tasks": "Attività",
-    "settings": "Impostazioni",
-    "shopping": "Spesa"
+    "shopping": "Spesa",
+    "settings": "Impostazioni"
+  },
+  "onboarding": {
+    "profile": {
+      "title": "Configura il tuo profilo",
+      "subtitle": "Questo aiuta la famiglia a riconoscere chi è chi.",
+      "name": "Il tuo nome",
+      "role": "Tu sei",
+      "gender": "Genere",
+      "male": "Maschio",
+      "female": "Femmina",
+      "autoAvatar": "L'avatar verrà impostato automaticamente"
+    },
+    "family": {
+      "title": "Unisciti o crea una famiglia",
+      "subtitle": "Puoi unirti con un codice o creare una nuova famiglia.",
+      "joinTitle": "Unisciti a una famiglia esistente",
+      "joinSub": "Inserisci il codice famiglia che hai ricevuto da un genitore.",
+      "createTitle": "Crea una nuova famiglia",
+      "createSub": "Scegli un nome per la famiglia e invita altri più tardi."
+    }
   },
   "common": {
     "loading": "Caricamento...",
@@ -828,15 +986,31 @@ const it = {
     "copied": "Copiato.",
     "copyFailed": "Impossibile copiare.",
     "all": "Tutti",
-    "info": "Info",
-    "me": "Io",
     "on": "On",
     "off": "Off",
-    "success": "Successo"
+    "info": "Info",
+    "me": "Io",
+    "remove": "Rimuovi",
+    "rename": "Rinomina",
+    "success": "Successo",
+    "male": "Maschio",
+    "female": "Femmina",
+    "back": "Indietro",
+    "continue": "Continua",
+    "create": "Crea",
+    "join": "Unisciti"
   },
   "settings": {
     "title": "Impostazioni",
     "subtitle": "Famiglia, lingua e profilo",
+    "setup": {
+      "title": "Configura il tuo account",
+      "step1": "1) Unisciti o crea una famiglia",
+      "step2": "2) Poi imposta il tuo nome in Impostazioni → Famiglia",
+      "whyName": "Il tuo nome viene salvato come membro della famiglia e diventa disponibile dopo l’adesione.",
+      "next": "Prossimo passo",
+      "setNameNow": "Imposta il tuo nome così gli altri possono riconoscerti."
+    },
     "language": "Lingua",
     "languageHint": "Scegli la lingua dell’interfaccia.",
     "languageNote": "Questa modifica vale per tutta l’app.",
@@ -852,8 +1026,6 @@ const it = {
       "notInFamily": "Non sei in una famiglia.",
       "statusLine": "Famiglia: {{name}} (Invito: {{code}})",
       "title": "Famiglia",
-      "nextStepTitle": "Prossimo passo",
-      "nextStepBody": "Imposta il tuo nome così gli altri possono riconoscerti.",
       "notInFamilyTitle": "Nessuna famiglia"
     },
     "about": "Info",
@@ -866,11 +1038,10 @@ const it = {
       "editName": "Modifica nome",
       "copy": "Copia",
       "renameFamily": "Rinomina",
-      "setYourName": "Imposta il tuo nome",
+      "setName": "Imposta il nome",
       "leaveFamily": "Lascia la famiglia",
-      "deleteFamily": "Elimina famiglia",
+      "deleteFamily": "Elimina la famiglia",
       "showInviteCode": "Mostra codice invito",
-      "setName": "Imposta il tuo nome",
       "hideInviteCode": "Nascondi codice invito",
       "createFamily": "Crea famiglia",
       "joinFamily": "Unisciti alla famiglia",
@@ -888,47 +1059,38 @@ const it = {
     "labels": {
       "family": "Famiglia",
       "inviteCode": "Codice invito",
-      "yourName": "Il tuo nome",
       "myName": "Il tuo nome"
     },
     "notSet": "Non impostato",
-    "onlyMemberDeleteHint": "Puoi eliminare la famiglia solo se sei l'unico membro.",
-    "nameAfterJoin": "Unisciti o crea una famiglia per impostare il tuo nome.",
+    "nameAfterJoin": "Unisciti o crea una famiglia per impostare il nome.",
+    "deleteFamily": {
+      "help": "Puoi eliminare la famiglia solo quando sei l’unico membro.",
+      "title": "Elimina famiglia",
+      "body": "Questo eliminerà definitivamente la famiglia e tutti i dati.",
+      "confirm": "Digita DELETE per confermare.",
+      "deleted": "Famiglia eliminata."
+    },
     "joinFamily": {
-      "help": "Inserisci un codice invito da un membro della famiglia.",
+      "help": "Inserisci un codice invito di un membro della famiglia.",
       "title": "Unisciti alla famiglia",
       "placeholder": "Codice invito",
       "invalidCode": "Inserisci il codice invito.",
-      "joined": "Ora sei nella famiglia."
+      "joined": "Ora fai parte della famiglia."
     },
     "createFamily": {
       "title": "Crea famiglia",
-      "desc": "Crea una nuova famiglia e invita gli altri.",
-      "placeholder": "Nome famiglia",
-      "nameRequired": "Inserisci un nome famiglia.",
+      "desc": "Crea una nuova famiglia per iniziare a condividere le attività.",
+      "placeholder": "Nome della famiglia",
+      "nameRequired": "Il nome della famiglia è obbligatorio.",
       "created": "Famiglia creata."
-    },
-    "deleteFamily": {
-      "title": "Elimina famiglia",
-      "body": "Questo eliminerà la famiglia e tutti i dati. Non può essere annullato.",
-      "confirm": "Elimina",
-      "deleted": "Famiglia eliminata.",
-      "help": "Puoi eliminare la famiglia solo se sei l'unico membro."
-    },
-    "setup": {
-      "title": "Configura il tuo account",
-      "step1": "1) Unisciti o crea una famiglia",
-      "step2": "2) Poi imposta il tuo nome in Impostazioni → Famiglia",
-      "whyName": "Il nome è salvato come membro della famiglia, quindi è disponibile dopo l’adesione.",
-      "next": "Prossimo passo",
-      "setNameNow": "Imposta il tuo nome così gli altri possono riconoscerti."
     },
     "leaveFamily": {
       "title": "Lascia la famiglia",
-      "body": "Sei sicuro di voler lasciare la famiglia?",
+      "body": "Sei sicuro/a di voler lasciare la famiglia?",
       "confirm": "Lascia",
       "left": "Hai lasciato la famiglia."
-    }
+    },
+    "myProfile": "Il mio profilo"
   },
   "tasks": {
     "status": {
@@ -942,6 +1104,10 @@ const it = {
       "active": "Attivi",
       "review": "Da approvare",
       "done": "Fatti"
+    },
+    "timelineHint": {
+      "assigned": "Assegnato → Fatto → Approvato",
+      "created": "Creato → Fatto → Approvato"
     },
     "hideDoneOn": "Nascondi fatti: ON",
     "hideDoneOff": "Nascondi fatti: OFF",
@@ -988,13 +1154,30 @@ const it = {
     "assign": {
       "none": "Non assegnato",
       "select": "Seleziona",
+      "selectCta": "Seleziona",
       "clear": "Cancella selezione"
     },
     "title": "Compiti",
     "heroSub": "Filtri rapidi e panoramica",
-    "new": "+ Nuovo",
+    "newBtn": "+ Nuovo",
+    "new": {
+      "title": "Crea una nuova attività per un membro della famiglia",
+      "placeholder": {
+        "title": "es. Porta Luca all’allenamento",
+        "time": "es. 16:30"
+      },
+      "hint": {
+        "timeOptional": "Opzionale: imposta un orario per attivare i promemoria."
+      },
+      "repeatEveryDays": "Ripeti ogni",
+      "assignTo": "Chi deve farlo?"
+    },
     "newPrompt": "Cosa puoi fare oggi?",
     "when": "Quando?",
+    "reminder": {
+      "label": "Promemoria",
+      "requiresTime": "Imposta un orario per attivare i promemoria."
+    },
     "needsApproval": "Da approvare",
     "nextDue": "Prossima scadenza",
     "action": {
@@ -1003,19 +1186,28 @@ const it = {
       "requestDone": "Richiedi completamento",
       "approve": "Approva",
       "reject": "Rifiuta",
-      "doneAuto": "Fatto"
+      "doneAuto": "Fatto",
+      "illDoIt": "Lo faccio io",
+      "leave": "Esci",
+      "markDone": "Segna come fatto",
+      "notDone": "Non fatto",
+      "accept": "Accetta",
+      "take": "Prendi"
     },
     "repeatEveryPlaceholder": "Ripeti ogni ___ giorni (solo numeri)",
+    "repeatDaysPlaceholder": "___",
     "dateInvalid": "Scegli una data valida.",
     "timeInvalid": "L'ora deve essere HHMM (es. 1630).",
     "calendarMissing": "Selettore calendario non installato. Inserisci GGMM; il calendario è opzionale.",
-    "active": "Attivi",
-    "done": "Fatti",
+    "active": "Attive",
+    "done": "Fatte",
     "review": "Da approvare",
     "selectedDate": "Data selezionata",
     "dateNotSet": "—",
-    "repeatFor": "Ripeti attività per",
-    "repeatDaysPlaceholder": "___"
+    "badge": {
+      "open": "Aperto",
+      "done": "Fatto"
+    }
   },
   "today": {
     "title": "Oggi",
@@ -1053,123 +1245,81 @@ const it = {
     "stats": {
       "parents": "Genitori",
       "kids": "Bambini",
-      "todayDone": "Oggi completati"
+      "todayDone": "Oggi completati",
+      "done": "Fatto",
+      "family": "Tutti i compiti di famiglia"
     },
     "defaultParent": "Genitore",
     "defaultChild": "Bambino",
     "role": {
       "parent": "Genitore",
-      "child": "Bambino"
+      "child": "Bambino",
+      "mom": "Mamma",
+      "dad": "Papà"
     },
     "doneToday": "Fatto oggi",
-    "noFamilyTitle": "Non sei ancora in una famiglia.",
-    "noFamilyBody": "Unisciti/crea una famiglia in Impostazioni → Famiglia.",
-    "countLine": "{{n}} membri",
-    "actions": {
-      "subtitle": "Modifica membro",
-      "roleTitle": "Ruolo",
-      "rename": "Rinomina",
-      "remove": "Rimuovi"
-    },
-    "rename": {
-      "title": "Rinomina",
-      "placeholder": "Nuovo nome"
-    },
-    "lastParent": {
-      "cantChangeRole": "Non puoi cambiare il ruolo dell’ultimo genitore. Aggiungi prima un altro genitore.",
-      "cantRemove": "Non puoi rimuovere l’ultimo genitore. Aggiungi prima un altro genitore.",
-      "notice": "Questo è l’ultimo genitore, quindi non puoi cambiarne il ruolo né rimuoverlo."
-    },
-    "remove": {
-      "title": "Rimuovere il membro?",
-      "body": "Le attività restano, ma il membro viene rimosso e le assegnazioni vengono cancellate."
-    },
-    "fallbackMember": "Membro",
-    "changeOwnNameHint": "Cambia il tuo nome in Impostazioni → Famiglia.",
-    "memberFallback": "Membro",
+    "changeOwnNameHint": "Cambia il tuo nome in Impostazioni → Profilo.",
     "editMember": "Modifica membro",
+    "hello": "Ciao",
+    "lastParentCantChangeRole": "Non puoi cambiare il ruolo dell’ultimo genitore. Aggiungi prima un altro genitore.",
+    "lastParentCantRemove": "Non puoi rimuovere l’ultimo genitore. Aggiungi prima un altro genitore.",
+    "lastParentNotice": "Questo è l’ultimo genitore, quindi non puoi cambiare il suo ruolo né rimuoverlo.",
+    "memberFallback": "Membro",
+    "newNamePlaceholder": "Nuovo nome",
+    "noFamilyBody": "Unisciti/crea una famiglia in Impostazioni → Famiglia.",
+    "noFamilyTitle": "Non sei ancora in una famiglia.",
+    "overview": "Ecco una panoramica delle attività della tua famiglia.",
+    "removeBody": "Le attività rimangono, ma il membro viene rimosso e tutte le assegnazioni a lui vengono cancellate.",
+    "removeTitle": "Rimuovere il membro?",
     "roleTitle": "Ruolo",
-    "lastParentNotice": "Questo è l'ultimo genitore, quindi non puoi cambiare il ruolo né rimuoverlo.",
-    "removeTitle": "Rimuovere membro?",
-    "removeBody": "Le attività restano, ma il membro viene rimosso e le assegnazioni vengono cancellate.",
-    "count": "{{n}} membri",
-    "newNamePlaceholder": "Nuovo nome"
+    "parent": "Genitore",
+    "child": "Bambino",
+    "editHintLongPress": "Suggerimento: tieni premuto su un membro per modificare."
   },
   "auth": {
+    "tagline": "Attività di famiglia, semplificate",
+    "title": "Accedi",
+    "registerTitle": "Crea account",
+    "email": "Email",
+    "password": "Password",
+    "confirmPassword": "Conferma password",
+    "togglePassword": "Mostra o nascondi password",
+    "placeholders": {
+      "email": "nome@email.com",
+      "password": "••••••••",
+      "confirmPassword": "••••••••"
+    },
+    "passwordLoginBtn": "Accedi",
+    "registerBtn": "Crea account",
+    "forgotPasswordBtn": "Password dimenticata?",
+    "sendMagicLinkBtn": "Invia magic link",
+    "noAccount": "Non hai un account?",
+    "createAccount": "Creane uno",
+    "haveAccount": "Hai già un account?",
+    "backToLogin": "Accedi",
+    "alerts": {
+      "missingEmailPasswordBody": "Inserisci email e password.",
+      "missingEmailBody": "Inserisci la tua email.",
+      "missingRegisterBody": "Inserisci email e entrambe le password.",
+      "weakPasswordBody": "La password deve avere almeno 6 caratteri.",
+      "passwordMismatchBody": "Le password non coincidono.",
+      "loginErrorTitle": "Errore di accesso",
+      "resetSentBody": "Ti abbiamo inviato un’email con un link per impostare una nuova password.",
+      "resetErrorTitle": "Errore di reset",
+      "magicLinkSentBody": "Magic link inviato alla tua email.",
+      "magicLinkErrorTitle": "Errore magic link",
+      "registerConfirmEmailBody": "Account creato. Conferma l’indirizzo email tramite il link inviato, poi accedi.",
+      "registerOkBody": "Account creato. Ora puoi accedere.",
+      "registerErrorTitle": "Errore di registrazione"
+    },
     "missingUid": "Non hai effettuato l’accesso (ID membro mancante).",
     "invalidEmail": "Inserisci un’email valida.",
     "magicLinkSent": "Controlla l’email per il link di accesso.",
     "magicLinkHelp": "Ti invieremo un link di accesso via email.",
-    "loginMagicLink": "Accedi (magic link)",
+    "loginMagicLink": "Accesso (magic link)",
     "sendLink": "Invia link",
     "logout": "Esci",
     "signedInAs": "Accesso come:"
-  },
-  "home": {
-    "anytimeTitle": "In qualsiasi momento",
-    "anytimeHint": "Senza scadenza",
-    "badge": {
-      "attention": "ATTENZ"
-    },
-    "doneTitle": "Fatto",
-    "doneHint": "Completati di recente",
-    "emptyTitle": "Nessun compito",
-    "emptySubtitle": "Aggiungi compiti per iniziare.",
-    "familyPrefix": "Famiglia",
-    "filterPrefix": "Filtro",
-    "reviewTitle": "Da approvare",
-    "reviewHint": "In attesa della tua decisione",
-    "reviewHintChild": "In attesa del genitore",
-    "scope": {
-      "family": "Famiglia",
-      "kids": "Bambini",
-      "me": "Io"
-    },
-    "status": {
-      "open": "Aperto"
-    },
-    "subtitle": "Panoramica rapida",
-    "tabAll": "Tutti",
-    "tabKids": "Bambini",
-    "tabMe": "Io",
-    "tagline": "Compiti di famiglia, semplici",
-    "todayHint": "Focus",
-    "todayTitle": "Oggi",
-    "upcomingHint": "Prossimi 7 giorni",
-    "upcomingTitle": "In arrivo",
-    "stats": {
-      "active": "Attivi",
-      "review": "Da approvare",
-      "done": "Fatti"
-    },
-    "brandTitle": "FamiGo",
-    "scopeHint": {
-      "me": "Attività per te",
-      "kids": "Attività per tutti i bambini",
-      "family": "Tutte le attività di famiglia"
-    },
-    "info": {
-      "scope": {
-        "title": "Viste",
-        "body": "Scegli quali attività mostrare: Famiglia, Bambini o Io."
-      },
-      "review": {
-        "title": "In attesa di approvazione",
-        "body": {
-          "parent": "Approva o rifiuta le attività segnate come completate.",
-          "child": "Quando richiedi completamento, un genitore deve approvarlo."
-        }
-      },
-      "actions": {
-        "title": "Pulsanti",
-        "open": "Prendi — assegna l’attività a te.",
-        "claimed": "Richiedi conferma — chiedi a un genitore di approvare.",
-        "review": {
-          "parent": "Approva / Rifiuta — decidi se l’attività è fatta.",
-          "child": "In attesa — un genitore approverà o rifiuterà."
-        }
-      }
-    }
   },
   "shopping": {
     "addBtn": "Aggiungi",
@@ -1187,28 +1337,91 @@ const it = {
     "suggestedBy": "Suggerito da",
     "toBuy": "Da comprare",
     "title": "Spesa",
+    "goShop": "Vai a fare la spesa",
+    "sendTitle": "Invia lista",
+    "sendPick": "Scegli chi va a fare la spesa.",
+    "sendEmpty": "La lista è vuota.",
+    "sendHeader": "Chi va a fare la spesa?",
+    "sendHint": "Invia l’intera lista come un’unica notifica (senza spam).",
+    "sentTitle": "Inviato",
+    "sentBody": "La notifica della lista della spesa è stata inviata.",
+    "addedAt": "Aggiunto",
+    "addedBy": "Aggiunto da",
+    "bought": "Comprato",
+    "bought7d": "Comprati (7 giorni)",
+    "boughtEmptyTitle": "Nessun acquisto recente",
+    "boughtEmptyBody": "Gli articoli che segni come acquistati appariranno qui per 7 giorni.",
+    "boughtWhen": "Acquistato",
     "chip": {
-      "detergent": "Detersivo per bucato",
-      "toiletPaper": "Carta igienica",
-      "water": "Acqua",
-      "milk": "Latte",
       "bread": "Pane",
+      "cheese": "Formaggio",
+      "detergent": "Detersivo per bucato",
+      "dishSoap": "Detersivo per piatti",
       "eggs": "Uova",
       "fruit": "Frutta",
-      "vegetables": "Verdure",
       "meat": "Carne",
-      "cheese": "Formaggio",
+      "milk": "Latte",
       "shampoo": "Shampoo",
-      "dishSoap": "Detersivo per piatti"
+      "toiletPaper": "Carta igienica",
+      "vegetables": "Verdura",
+      "water": "Acqua"
+    }
+  },
+  "home": {
+    "title": "Attività quotidiane",
+    "subtitle": "Panoramica rapida e focus",
+    "plannerToday": "Planner — oggi",
+    "tasksLatest": "Attività — più recenti",
+    "shopping": "Spesa",
+    "shoppingCartCount": "Hai {{count}} articoli nel carrello",
+    "viewMore": "Vedi altro",
+    "noFamilyShopping": "Unisciti o crea una famiglia per usare la lista della spesa condivisa.",
+    "noTime": "In qualsiasi momento",
+    "shoppingEmpty": "La lista della spesa è vuota",
+    "plannerEmptyMe": "Niente in programma oggi",
+    "plannerEmptyKids": "Niente in programma per i bambini",
+    "plannerEmptyFamily": "Niente in programma oggi",
+    "plannerEmptyFamilySub": "Pianifica una piccola cosa ✨",
+    "plannerEmptySub": "Tutto ok 🙂",
+    "tasksEmptyMe": "Nessuna attività per te",
+    "tasksEmptyKids": "I bambini non hanno attività",
+    "tasksEmptyFamily": "Nessuna attività aperta",
+    "tasksEmptySub": "Tutto pulito. Continua così 😄",
+  },
+
+  "planner": {
+    "title": "Planner",
+    "subtitle": "Il tuo piano giornaliero semplice (privato o condiviso).",
+    "selectedDay": "Selezionato",
+    "hintPickDay": "Scegli un giorno nel calendario, poi tocca + Nuovo",
+    "newBtn": "+ Nuovo",
+    "newTitle": "Nuovo piano",
+    "editTitle": "Modifica piano",
+    "placeholder": {
+      "title": "es. medico, pagare le bollette, chiamare la nonna"
     },
-    "bought7days": "Comprato (7 giorni)",
-    "bought7d": "Comprato (7 giorni)",
-    "bought": "Comprato",
-    "boughtEmptyTitle": "Nessun acquisto recente",
-    "boughtEmptyBody": "Gli articoli comprati negli ultimi 7 giorni appariranno qui.",
-    "addedBy": "Aggiunto da",
-    "addedAt": "Aggiunto",
-    "boughtWhen": "Comprato"
+    "timeLabel": "Orario (opzionale)",
+    "timePlaceholder": "HHMM (es. 1630)",
+    "anytime": "Qualsiasi",
+    "for": "Per",
+    "shared": "Condiviso",
+    "forWho": "Per chi?",
+    "family": "Famiglia",
+    "someone": "Qualcuno",
+    "assigned": {
+      "all": "Famiglia",
+      "some": "Selezionati"
+    },
+    "someHint": "Suggerimento: seleziona uno o più membri. (Pressione lunga per eliminare)",
+    "noFamilyHint": "Suggerimento: unisciti a una famiglia per condividere un piano con un membro.",
+    "noStorage": "Nota: AsyncStorage non è installato, quindi i piani verranno azzerati al riavvio dell'app.",
+    "calendarMissing": "Il componente calendario non è installato. Se vuoi la vista mensile, installa react-native-calendars.",
+    "emptyTitle": "Nessun piano ancora",
+    "emptyBody": "Tocca + Nuovo e aggiungi il primo piano per questo giorno.",
+    "titleRequired": "Il titolo è obbligatorio.",
+    "timeInvalid": "L'orario deve essere HH:MM (es. 1630).",
+    "pickSomeone": "Scegli almeno un membro.",
+    "deleteConfirm": "Eliminare questo elemento?"
   }
 };
 
@@ -1217,8 +1430,28 @@ const sl = {
     "home": "Danes",
     "members": "Člani",
     "tasks": "Opravila",
-    "settings": "Nastavitve",
-    "shopping": "Nakupovanje"
+    "shopping": "Nakupovanje",
+    "settings": "Nastavitve"
+  },
+  "onboarding": {
+    "profile": {
+      "title": "Nastavi svoj profil",
+      "subtitle": "To pomaga družini prepoznati, kdo je kdo.",
+      "name": "Tvoje ime",
+      "role": "Ti si",
+      "gender": "Spol",
+      "male": "Moški",
+      "female": "Ženska",
+      "autoAvatar": "Avatar bo nastavljen samodejno"
+    },
+    "family": {
+      "title": "Pridruži se ali ustvari družino",
+      "subtitle": "Lahko se pridružiš s kodo ali ustvariš novo družino.",
+      "joinTitle": "Pridruži se obstoječi družini",
+      "joinSub": "Vnesi družinsko kodo, ki si jo dobil/a od starša.",
+      "createTitle": "Ustvari novo družino",
+      "createSub": "Izberi ime družine in kasneje povabi druge."
+    }
   },
   "common": {
     "loading": "Nalaganje...",
@@ -1230,15 +1463,31 @@ const sl = {
     "copied": "Kopirano.",
     "copyFailed": "Ni mogoče kopirati.",
     "all": "Vse",
-    "info": "Info",
-    "me": "Jaz",
     "on": "Vklop",
     "off": "Izklop",
-    "success": "Uspeh"
+    "info": "Info",
+    "me": "Jaz",
+    "remove": "Odstrani",
+    "rename": "Preimenuj",
+    "success": "Uspeh",
+    "male": "Moški",
+    "female": "Ženska",
+    "back": "Nazaj",
+    "continue": "Nadaljuj",
+    "create": "Ustvari",
+    "join": "Pridruži se"
   },
   "settings": {
     "title": "Nastavitve",
     "subtitle": "Družina, jezik in profil",
+    "setup": {
+      "title": "Nastavi račun",
+      "step1": "1) Pridruži se ali ustvari družino",
+      "step2": "2) Nato nastavi svoje ime v Nastavitve → Družina",
+      "whyName": "Tvoje ime se shrani kot član družine in je na voljo po pridružitvi.",
+      "next": "Naslednji korak",
+      "setNameNow": "Nastavi svoje ime, da te bodo drugi prepoznali."
+    },
     "language": "Jezik",
     "languageHint": "Izberi jezik vmesnika.",
     "languageNote": "Ta sprememba velja za celotno aplikacijo.",
@@ -1254,8 +1503,6 @@ const sl = {
       "notInFamily": "Nisi v družini.",
       "statusLine": "Družina: {{name}} (Vabilo: {{code}})",
       "title": "Družina",
-      "nextStepTitle": "Naslednji korak",
-      "nextStepBody": "Nastavi svoje ime, da te bodo drugi prepoznali.",
       "notInFamilyTitle": "Še ni družine"
     },
     "about": "O aplikaciji",
@@ -1268,12 +1515,11 @@ const sl = {
       "editName": "Uredi ime",
       "copy": "Kopiraj",
       "renameFamily": "Preimenuj",
-      "setYourName": "Nastavi svoje ime",
+      "setName": "Nastavi ime",
       "leaveFamily": "Zapusti družino",
       "deleteFamily": "Izbriši družino",
-      "showInviteCode": "Prikaži kodo povabila",
-      "setName": "Nastavi svoje ime",
-      "hideInviteCode": "Skrij kodo vabila",
+      "showInviteCode": "Pokaži kodo povabila",
+      "hideInviteCode": "Skrij kodo povabila",
       "createFamily": "Ustvari družino",
       "joinFamily": "Pridruži se družini",
       "join": "Pridruži se"
@@ -1290,47 +1536,38 @@ const sl = {
     "labels": {
       "family": "Družina",
       "inviteCode": "Vabilna koda",
-      "yourName": "Tvoje ime",
       "myName": "Tvoje ime"
     },
     "notSet": "Ni nastavljeno",
-    "onlyMemberDeleteHint": "Družino lahko izbrišeš samo, če si edini član.",
     "nameAfterJoin": "Pridruži se ali ustvari družino, da nastaviš ime.",
+    "deleteFamily": {
+      "help": "Družino lahko izbrišeš le, ko si edini član.",
+      "title": "Izbriši družino",
+      "body": "To bo trajno izbrisalo družino in vse podatke.",
+      "confirm": "Vpiši DELETE za potrditev.",
+      "deleted": "Družina izbrisana."
+    },
     "joinFamily": {
-      "help": "Vnesi kodo vabila od družinskega člana.",
+      "help": "Vnesi kodo povabila od družinskega člana.",
       "title": "Pridruži se družini",
-      "placeholder": "Koda vabila",
+      "placeholder": "Vabilo koda",
       "invalidCode": "Vnesi kodo vabila.",
       "joined": "Zdaj si v družini."
     },
     "createFamily": {
       "title": "Ustvari družino",
-      "desc": "Ustvari novo družino in povabi druge.",
+      "desc": "Ustvari novo družino in začni deliti naloge.",
       "placeholder": "Ime družine",
-      "nameRequired": "Vnesi ime družine.",
+      "nameRequired": "Ime družine je obvezno.",
       "created": "Družina ustvarjena."
-    },
-    "deleteFamily": {
-      "title": "Izbriši družino",
-      "body": "To bo izbrisalo družino in vse podatke. Ni mogoče razveljaviti.",
-      "confirm": "Izbriši",
-      "deleted": "Družina izbrisana.",
-      "help": "Družino lahko izbrišeš samo, če si edini član."
-    },
-    "setup": {
-      "title": "Nastavi račun",
-      "step1": "1) Pridruži se ali ustvari družino",
-      "step2": "2) Nato nastavi ime v Nastavitve → Družina",
-      "whyName": "Ime se shrani kot član družine, zato je na voljo po pridružitvi.",
-      "next": "Naslednji korak",
-      "setNameNow": "Nastavi svoje ime, da te bodo drugi prepoznali."
     },
     "leaveFamily": {
       "title": "Zapusti družino",
       "body": "Ali si prepričan/a, da želiš zapustiti družino?",
       "confirm": "Zapusti",
       "left": "Zapustil/a si družino."
-    }
+    },
+    "myProfile": "Moj profil"
   },
   "tasks": {
     "status": {
@@ -1344,6 +1581,10 @@ const sl = {
       "active": "Aktivno",
       "review": "Za potrditev",
       "done": "Končano"
+    },
+    "timelineHint": {
+      "assigned": "Dodeljeno → Opravljeno → Odobreno",
+      "created": "Ustvarjeno → Opravljeno → Odobreno"
     },
     "hideDoneOn": "Skrij končano: VKL",
     "hideDoneOff": "Skrij končano: IZKL",
@@ -1390,13 +1631,30 @@ const sl = {
     "assign": {
       "none": "Ni dodeljeno",
       "select": "Izberi",
+      "selectCta": "Izberi",
       "clear": "Počisti izbiro"
     },
     "title": "Opravila",
     "heroSub": "Hitri filtri in pregled",
-    "new": "+ Novo",
+    "newBtn": "+ Novo",
+    "new": {
+      "title": "Ustvari novo opravilo za družinskega člana",
+      "placeholder": {
+        "title": "npr. Pelji Luko na trening",
+        "time": "npr. 16:30"
+      },
+      "hint": {
+        "timeOptional": "Neobvezno: nastavi uro za opomnike."
+      },
+      "repeatEveryDays": "Ponovi vsakih",
+      "assignTo": "Kdo naj to naredi?"
+    },
     "newPrompt": "Kaj lahko danes narediš?",
     "when": "Kdaj?",
+    "reminder": {
+      "label": "Opomnik",
+      "requiresTime": "Nastavi uro za opomnike."
+    },
     "needsApproval": "Za potrditev",
     "nextDue": "Naslednji rok",
     "action": {
@@ -1405,19 +1663,28 @@ const sl = {
       "requestDone": "Zahtevaj potrditev",
       "approve": "Odobri",
       "reject": "Zavrni",
-      "doneAuto": "Opravljeno"
+      "doneAuto": "Opravljeno",
+      "illDoIt": "Jaz bom",
+      "leave": "Zapusti",
+      "markDone": "Označi kot končano",
+      "notDone": "Ni končano",
+      "accept": "Sprejmi",
+      "take": "Prevzemi"
     },
     "repeatEveryPlaceholder": "Ponovi vsakih ___ dni (samo številke)",
+    "repeatDaysPlaceholder": "___",
     "dateInvalid": "Izberi veljaven datum.",
     "timeInvalid": "Čas mora biti HHMM (npr. 1630).",
     "calendarMissing": "Izbirnik koledarja ni nameščen. Vnesi DDMM; koledar je neobvezen.",
     "active": "Aktivno",
-    "done": "Opravljeno",
-    "review": "Za odobritev",
-    "selectedDate": "Izbrani datum",
+    "done": "Končano",
+    "review": "Za potrditev",
+    "selectedDate": "Izbran datum",
     "dateNotSet": "—",
-    "repeatFor": "Ponovi opravilo za",
-    "repeatDaysPlaceholder": "___"
+    "badge": {
+      "open": "Odprto",
+      "done": "Končano"
+    }
   },
   "today": {
     "title": "Danes",
@@ -1455,123 +1722,81 @@ const sl = {
     "stats": {
       "parents": "Starši",
       "kids": "Otroci",
-      "todayDone": "Danes opravljeno"
+      "todayDone": "Danes opravljeno",
+      "done": "Končano",
+      "family": "Vsa družinska opravila"
     },
     "defaultParent": "Starš",
     "defaultChild": "Otrok",
     "role": {
       "parent": "Starš",
-      "child": "Otrok"
+      "child": "Otrok",
+      "mom": "Mama",
+      "dad": "Oče"
     },
     "doneToday": "Danes opravljeno",
-    "noFamilyTitle": "Še nisi v družini.",
-    "noFamilyBody": "Pridruži se/ustvari družino v Nastavitve → Družina.",
-    "countLine": "{{n}} članov",
-    "actions": {
-      "subtitle": "Uredi člana",
-      "roleTitle": "Vloga",
-      "rename": "Preimenuj",
-      "remove": "Odstrani"
-    },
-    "rename": {
-      "title": "Preimenuj",
-      "placeholder": "Novo ime"
-    },
-    "lastParent": {
-      "cantChangeRole": "Ne moreš spremeniti vloge zadnjega starša. Najprej dodaj še enega starša.",
-      "cantRemove": "Ne moreš odstraniti zadnjega starša. Najprej dodaj še enega starša.",
-      "notice": "To je zadnji starš, zato mu ne moreš spremeniti vloge ali ga odstraniti."
-    },
-    "remove": {
-      "title": "Odstranim člana?",
-      "body": "Opravila ostanejo, vendar se član odstrani in dodelitve se počistijo."
-    },
-    "fallbackMember": "Član",
-    "changeOwnNameHint": "Svoje ime spremeni v Nastavitve → Družina.",
-    "memberFallback": "Član",
+    "changeOwnNameHint": "Spremeni svoje ime v Nastavitve → Profil.",
     "editMember": "Uredi člana",
-    "roleTitle": "Vloga",
+    "hello": "Živjo",
+    "lastParentCantChangeRole": "Vloge zadnjega starša ne moreš spremeniti. Najprej dodaj še enega starša.",
+    "lastParentCantRemove": "Zadnjega starša ne moreš odstraniti. Najprej dodaj še enega starša.",
     "lastParentNotice": "To je zadnji starš, zato mu ne moreš spremeniti vloge ali ga odstraniti.",
-    "removeTitle": "Odstranim člana?",
-    "removeBody": "Opravila ostanejo, vendar se član odstrani in dodelitve se počistijo.",
-    "count": "{{n}} članov",
-    "newNamePlaceholder": "Novo ime"
+    "memberFallback": "Član",
+    "newNamePlaceholder": "Novo ime",
+    "noFamilyBody": "Pridruži se/ustvari družino v Nastavitve → Družina.",
+    "noFamilyTitle": "Še nisi v družini.",
+    "overview": "Tukaj je pregled družinskih aktivnosti.",
+    "removeBody": "Naloge ostanejo, vendar se član odstrani in vse dodelitve njemu se počistijo.",
+    "removeTitle": "Odstraniti člana?",
+    "roleTitle": "Vloga",
+    "parent": "Starš",
+    "child": "Otrok",
+    "editHintLongPress": "Namig: dolgo pritisni člana za urejanje."
   },
   "auth": {
+    "tagline": "Družinska opravila, poenostavljeno",
+    "title": "Prijava",
+    "registerTitle": "Ustvari račun",
+    "email": "E‑pošta",
+    "password": "Geslo",
+    "confirmPassword": "Potrdi geslo",
+    "togglePassword": "Pokaži ali skrij geslo",
+    "placeholders": {
+      "email": "ime@email.com",
+      "password": "••••••••",
+      "confirmPassword": "••••••••"
+    },
+    "passwordLoginBtn": "Prijavi se",
+    "registerBtn": "Ustvari račun",
+    "forgotPasswordBtn": "Pozabljeno geslo?",
+    "sendMagicLinkBtn": "Pošlji magic link",
+    "noAccount": "Nimaš računa?",
+    "createAccount": "Ustvari ga",
+    "haveAccount": "Že imaš račun?",
+    "backToLogin": "Prijava",
+    "alerts": {
+      "missingEmailPasswordBody": "Vnesi e‑pošto in geslo.",
+      "missingEmailBody": "Vnesi svojo e‑pošto.",
+      "missingRegisterBody": "Vnesi e‑pošto in obe polji gesla.",
+      "weakPasswordBody": "Geslo mora imeti vsaj 6 znakov.",
+      "passwordMismatchBody": "Gesli se ne ujemata.",
+      "loginErrorTitle": "Napaka pri prijavi",
+      "resetSentBody": "Poslali smo ti e‑pošto s povezavo za nastavitev novega gesla.",
+      "resetErrorTitle": "Napaka pri ponastavitvi",
+      "magicLinkSentBody": "Magic link smo poslali na tvojo e‑pošto.",
+      "magicLinkErrorTitle": "Napaka magic linka",
+      "registerConfirmEmailBody": "Račun je ustvarjen. Potrdi e‑pošto preko povezave, nato se prijavi.",
+      "registerOkBody": "Račun je ustvarjen. Zdaj se lahko prijaviš.",
+      "registerErrorTitle": "Napaka pri registraciji"
+    },
     "missingUid": "Nisi prijavljen (manjka ID člana).",
-    "invalidEmail": "Vnesi veljaven e‑poštni naslov.",
-    "magicLinkSent": "Preveri e‑pošto za prijavni link.",
-    "magicLinkHelp": "Po e‑pošti ti bomo poslali prijavni link.",
+    "invalidEmail": "Vnesi veljavno e‑pošto.",
+    "magicLinkSent": "Preveri e‑pošto za povezavo za prijavo.",
+    "magicLinkHelp": "Po e‑pošti ti bomo poslali povezavo za prijavo.",
     "loginMagicLink": "Prijava (magic link)",
     "sendLink": "Pošlji povezavo",
     "logout": "Odjava",
     "signedInAs": "Prijavljen kot:"
-  },
-  "home": {
-    "anytimeTitle": "Kadarkoli",
-    "anytimeHint": "Brez roka",
-    "badge": {
-      "attention": "POZOR"
-    },
-    "doneTitle": "Opravljeno",
-    "doneHint": "Nedavno končano",
-    "emptyTitle": "Ni opravil",
-    "emptySubtitle": "Dodaj opravila za začetek.",
-    "familyPrefix": "Družina",
-    "filterPrefix": "Filter",
-    "reviewTitle": "Za potrditev",
-    "reviewHint": "Čaka na tvojo odločitev",
-    "reviewHintChild": "Čaka na starša",
-    "scope": {
-      "family": "Družina",
-      "kids": "Otroci",
-      "me": "Jaz"
-    },
-    "status": {
-      "open": "Odprto"
-    },
-    "subtitle": "Hiter pregled",
-    "tabAll": "Vse",
-    "tabKids": "Otroci",
-    "tabMe": "Jaz",
-    "tagline": "Družinska opravila, preprosto",
-    "todayHint": "Fokus",
-    "todayTitle": "Danes",
-    "upcomingHint": "Naslednjih 7 dni",
-    "upcomingTitle": "Prihaja",
-    "stats": {
-      "active": "Aktivno",
-      "review": "Za potrditev",
-      "done": "Opravljeno"
-    },
-    "brandTitle": "FamiGo",
-    "scopeHint": {
-      "me": "Opravila zate",
-      "kids": "Opravila za vse otroke",
-      "family": "Vsa družinska opravila"
-    },
-    "info": {
-      "scope": {
-        "title": "Pogledi",
-        "body": "Izberi, čigava opravila prikazati: Družina, Otroci ali Jaz."
-      },
-      "review": {
-        "title": "Čaka odobritev",
-        "body": {
-          "parent": "Odobri ali zavrni opravila, ki so označena kot opravljena.",
-          "child": "Ko zahtevaš potrditev, jo mora odobriti starš."
-        }
-      },
-      "actions": {
-        "title": "Gumbi",
-        "open": "Prevzemi — vzemi opravilo zase.",
-        "claimed": "Zahtevaj potrditev — prosi starša za odobritev.",
-        "review": {
-          "parent": "Odobri / Zavrni — odloči, ali je opravljeno.",
-          "child": "Čakanje — starš bo odobril ali zavrnil."
-        }
-      }
-    }
   },
   "shopping": {
     "addBtn": "Dodaj",
@@ -1589,28 +1814,92 @@ const sl = {
     "suggestedBy": "Predlagal",
     "toBuy": "Za kupiti",
     "title": "Nakupi",
+    "goShop": "Pojdi v trgovino",
+    "sendTitle": "Pošlji seznam",
+    "sendPick": "Izberi, kdo gre v trgovino.",
+    "sendEmpty": "Seznam je prazen.",
+    "sendHeader": "Kdo gre v trgovino?",
+    "sendHint": "Pošlji cel seznam kot eno obvestilo (brez spama).",
+    "sentTitle": "Poslano",
+    "sentBody": "Obvestilo s seznamom za nakup je bilo poslano.",
+    "addedAt": "Dodano",
+    "addedBy": "Dodano od",
+    "bought": "Kupljeno",
+    "bought7d": "Kupljeno (7 dni)",
+    "boughtEmptyTitle": "Ni nedavnih nakupov",
+    "boughtEmptyBody": "Izdelki, ki jih označiš kot kupljene, bodo tukaj prikazani 7 dni.",
+    "boughtWhen": "Kupljeno",
     "chip": {
-      "detergent": "Detergent za perilo",
-      "toiletPaper": "Toaletni papir",
-      "water": "Voda",
-      "milk": "Mleko",
       "bread": "Kruh",
+      "cheese": "Sir",
+      "detergent": "Detergent za perilo",
+      "dishSoap": "Detergent za posodo",
       "eggs": "Jajca",
       "fruit": "Sadje",
-      "vegetables": "Zelenjava",
       "meat": "Meso",
-      "cheese": "Sir",
+      "milk": "Mleko",
       "shampoo": "Šampon",
-      "dishSoap": "Detergent za posodo"
+      "toiletPaper": "Toaletni papir",
+      "vegetables": "Zelenjava",
+      "water": "Voda"
+    }
+  },
+  "home": {
+    "title": "Dnevne naloge",
+    "subtitle": "Hiter pregled in fokus",
+    "plannerToday": "Načrtovalnik — danes",
+    "tasksLatest": "Naloge — najnovejše",
+    "shopping": "Nakupovanje",
+    "shoppingCartCount": "V košarici imaš {{count}} izdelkov",
+    "viewMore": "Poglej več",
+    "noFamilyShopping": "Pridruži se ali ustvari družino za skupni nakupovalni seznam.",
+    "noTime": "Kadarkoli",
+    "shoppingEmpty": "Nakupovalni seznam je prazen",
+    "plannerEmptyMe": "Danes ni načrtov",
+    "plannerEmptyKids": "Za otroke ni načrtov",
+    "plannerEmptyFamily": "Danes ni načrtov",
+    "plannerEmptyFamilySub": "Načrtuj eno malenkost ✨",
+    "plannerEmptySub": "Vse je mirno 🙂",
+    "tasksEmptyMe": "Zate ni nalog",
+    "tasksEmptyKids": "Otroci nimajo nalog",
+    "tasksEmptyFamily": "Ni odprtih nalog",
+    "tasksEmptySub": "Vse je čisto. Tako ostani 😄",
+  },
+
+
+  "planner": {
+    "title": "Planer",
+    "subtitle": "Tvoj preprost dnevni plan (zasebno ali deljeno).",
+    "selectedDay": "Izbrano",
+    "hintPickDay": "Izberi dan na koledarju, nato tapni + Novo",
+    "newBtn": "+ Novo",
+    "newTitle": "Nov plan",
+    "editTitle": "Uredi plan",
+    "placeholder": {
+      "title": "npr. zdravnik, plačati račune, poklicati babico"
     },
-    "bought7days": "Kupljeno (7 dni)",
-    "bought7d": "Kupljeno (7 dni)",
-    "bought": "Kupljeno",
-    "boughtEmptyTitle": "Ni nedavnih nakupov",
-    "boughtEmptyBody": "Tukaj bodo prikazani izdelki kupljeni v zadnjih 7 dneh.",
-    "addedBy": "Dodano od",
-    "addedAt": "Dodano",
-    "boughtWhen": "Kupljeno"
+    "timeLabel": "Čas (neobvezno)",
+    "timePlaceholder": "HHMM (npr. 1630)",
+    "anytime": "Kadarkoli",
+    "for": "Za",
+    "shared": "Deljeno",
+    "forWho": "Za koga?",
+    "family": "Družina",
+    "someone": "Nekdo",
+    "assigned": {
+      "all": "Družina",
+      "some": "Izbrano"
+    },
+    "someHint": "Namig: izberi enega ali več članov. (Dolg pritisk za brisanje)",
+    "noFamilyHint": "Namig: pridruži se družini, da deliš plan s članom.",
+    "noStorage": "Opomba: AsyncStorage ni nameščen, zato se bodo plani po ponovnem zagonu aplikacije ponastavili.",
+    "calendarMissing": "Komponenta koledarja ni nameščena. Če želiš mesečni pogled, namesti react-native-calendars.",
+    "emptyTitle": "Ni planov",
+    "emptyBody": "Tapni + Novo in dodaj prvi plan za ta dan.",
+    "titleRequired": "Naslov je obvezen.",
+    "timeInvalid": "Čas mora biti HH:MM (npr. 1630).",
+    "pickSomeone": "Izberi vsaj enega člana.",
+    "deleteConfirm": "Izbrisati ta element?"
   }
 };
 
@@ -1619,8 +1908,28 @@ const fr = {
     "home": "Aujourd’hui",
     "members": "Membres",
     "tasks": "Tâches",
-    "settings": "Réglages",
-    "shopping": "Courses"
+    "shopping": "Courses",
+    "settings": "Réglages"
+  },
+  "onboarding": {
+    "profile": {
+      "title": "Configure ton profil",
+      "subtitle": "Cela aide la famille à reconnaître qui est qui.",
+      "name": "Ton nom",
+      "role": "Tu es",
+      "gender": "Genre",
+      "male": "Homme",
+      "female": "Femme",
+      "autoAvatar": "L’avatar sera défini automatiquement"
+    },
+    "family": {
+      "title": "Rejoindre ou créer une famille",
+      "subtitle": "Tu peux rejoindre avec un code ou créer une nouvelle famille.",
+      "joinTitle": "Rejoindre une famille existante",
+      "joinSub": "Saisis le code famille reçu d’un parent.",
+      "createTitle": "Créer une nouvelle famille",
+      "createSub": "Choisis un nom de famille et invite les autres plus tard."
+    }
   },
   "common": {
     "loading": "Chargement...",
@@ -1632,15 +1941,31 @@ const fr = {
     "copied": "Copié.",
     "copyFailed": "Impossible de copier.",
     "all": "Tous",
-    "info": "Infos",
-    "me": "Moi",
     "on": "Activé",
     "off": "Désactivé",
-    "success": "Succès"
+    "info": "Info",
+    "me": "Moi",
+    "remove": "Supprimer",
+    "rename": "Renommer",
+    "success": "Succès",
+    "male": "Homme",
+    "female": "Femme",
+    "back": "Retour",
+    "continue": "Continuer",
+    "create": "Créer",
+    "join": "Rejoindre"
   },
   "settings": {
     "title": "Réglages",
     "subtitle": "Famille, langue et profil",
+    "setup": {
+      "title": "Configurer votre compte",
+      "step1": "1) Rejoignez ou créez une famille",
+      "step2": "2) Puis définissez votre nom dans Paramètres → Famille",
+      "whyName": "Votre nom est enregistré comme membre de la famille et devient disponible après l’adhésion.",
+      "next": "Prochaine étape",
+      "setNameNow": "Définissez votre nom pour que les autres puissent vous reconnaître."
+    },
     "language": "Langue",
     "languageHint": "Choisissez la langue de l’interface.",
     "languageNote": "Ce changement s’applique à toute l’application.",
@@ -1656,9 +1981,7 @@ const fr = {
       "notInFamily": "Vous n’êtes pas dans une famille.",
       "statusLine": "Famille : {{name}} (Invitation : {{code}})",
       "title": "Famille",
-      "nextStepTitle": "Étape suivante",
-      "nextStepBody": "Définis ton nom pour que les autres puissent te reconnaître.",
-      "notInFamilyTitle": "Pas encore de famille"
+      "notInFamilyTitle": "Pas de famille"
     },
     "about": "À propos",
     "account": "Compte",
@@ -1670,14 +1993,13 @@ const fr = {
       "editName": "Modifier le nom",
       "copy": "Copier",
       "renameFamily": "Renommer",
-      "setYourName": "Définir ton nom",
+      "setName": "Définir mon nom",
       "leaveFamily": "Quitter la famille",
       "deleteFamily": "Supprimer la famille",
-      "showInviteCode": "Afficher le code d'invitation",
-      "setName": "Définir votre nom",
-      "hideInviteCode": "Masquer le code d’invitation",
+      "showInviteCode": "Afficher le code",
+      "hideInviteCode": "Masquer le code",
       "createFamily": "Créer une famille",
-      "joinFamily": "Rejoindre la famille",
+      "joinFamily": "Rejoindre une famille",
       "join": "Rejoindre"
     },
     "msg": {
@@ -1692,47 +2014,38 @@ const fr = {
     "labels": {
       "family": "Famille",
       "inviteCode": "Code d’invitation",
-      "yourName": "Ton nom",
-      "myName": "Votre nom"
+      "myName": "Ton nom"
     },
     "notSet": "Non défini",
-    "onlyMemberDeleteHint": "Tu peux supprimer la famille seulement si tu es le seul membre.",
     "nameAfterJoin": "Rejoignez ou créez une famille pour définir votre nom.",
+    "deleteFamily": {
+      "help": "Vous ne pouvez supprimer la famille que si vous êtes le seul membre.",
+      "title": "Supprimer la famille",
+      "body": "Cela supprimera définitivement la famille et toutes ses données.",
+      "confirm": "Tape DELETE pour confirmer.",
+      "deleted": "Famille supprimée."
+    },
     "joinFamily": {
-      "help": "Saisissez un code d’invitation d’un membre de la famille.",
-      "title": "Rejoindre la famille",
+      "help": "Entrez un code d’invitation d’un membre de la famille.",
+      "title": "Rejoindre une famille",
       "placeholder": "Code d’invitation",
-      "invalidCode": "Saisissez le code d’invitation.",
-      "joined": "Vous êtes maintenant dans la famille."
+      "invalidCode": "Saisis le code d’invitation.",
+      "joined": "Tu fais maintenant partie de la famille."
     },
     "createFamily": {
       "title": "Créer une famille",
-      "desc": "Créez une nouvelle famille et invitez les autres.",
+      "desc": "Crée une nouvelle famille pour commencer à partager les tâches.",
       "placeholder": "Nom de la famille",
-      "nameRequired": "Saisissez un nom de famille.",
+      "nameRequired": "Le nom de la famille est obligatoire.",
       "created": "Famille créée."
-    },
-    "deleteFamily": {
-      "title": "Supprimer la famille",
-      "body": "Cela supprimera la famille et toutes ses données. Action irréversible.",
-      "confirm": "Supprimer",
-      "deleted": "Famille supprimée.",
-      "help": "Vous pouvez supprimer la famille uniquement si vous en êtes le seul membre."
-    },
-    "setup": {
-      "title": "Configurer votre compte",
-      "step1": "1) Rejoignez ou créez une famille",
-      "step2": "2) Puis définissez votre nom dans Paramètres → Famille",
-      "whyName": "Votre nom est enregistré comme membre de la famille, donc disponible après avoir rejoint.",
-      "next": "Prochaine étape",
-      "setNameNow": "Définissez votre nom pour que les autres puissent vous reconnaître."
     },
     "leaveFamily": {
       "title": "Quitter la famille",
-      "body": "Êtes-vous sûr de vouloir quitter la famille ?",
+      "body": "Es-tu sûr(e) de vouloir quitter la famille ?",
       "confirm": "Quitter",
-      "left": "Vous avez quitté la famille."
-    }
+      "left": "Tu as quitté la famille."
+    },
+    "myProfile": "Mon profil"
   },
   "tasks": {
     "status": {
@@ -1746,6 +2059,10 @@ const fr = {
       "active": "Actives",
       "review": "À valider",
       "done": "Terminées"
+    },
+    "timelineHint": {
+      "assigned": "Assigné → Fait → Approuvé",
+      "created": "Créé → Fait → Approuvé"
     },
     "hideDoneOn": "Masquer terminées : ON",
     "hideDoneOff": "Masquer terminées : OFF",
@@ -1792,13 +2109,30 @@ const fr = {
     "assign": {
       "none": "Non attribué",
       "select": "Sélectionner",
+      "selectCta": "Sélectionner",
       "clear": "Effacer la sélection"
     },
     "title": "Tâches",
     "heroSub": "Filtres rapides et aperçu",
-    "new": "+ Nouvelle",
+    "newBtn": "+ Nouveau",
+    "new": {
+      "title": "Créer une nouvelle tâche pour un membre de la famille",
+      "placeholder": {
+        "title": "ex. Emmener Luka à l’entraînement",
+        "time": "ex. 16:30"
+      },
+      "hint": {
+        "timeOptional": "Facultatif : définissez une heure pour activer les rappels."
+      },
+      "repeatEveryDays": "Répéter tous les",
+      "assignTo": "Qui doit le faire ?"
+    },
     "newPrompt": "Que peux-tu faire aujourd’hui ?",
     "when": "Quand ?",
+    "reminder": {
+      "label": "Rappel",
+      "requiresTime": "Définissez une heure pour activer les rappels."
+    },
     "needsApproval": "À approuver",
     "nextDue": "Prochaine échéance",
     "action": {
@@ -1807,19 +2141,28 @@ const fr = {
       "requestDone": "Demander validation",
       "approve": "Approuver",
       "reject": "Refuser",
-      "doneAuto": "Terminé"
+      "doneAuto": "Terminé",
+      "illDoIt": "Je m’en charge",
+      "leave": "Quitter",
+      "markDone": "Marquer terminé",
+      "notDone": "Pas terminé",
+      "accept": "Accepter",
+      "take": "Prendre"
     },
     "repeatEveryPlaceholder": "Répéter tous les ___ jours (chiffres uniquement)",
+    "repeatDaysPlaceholder": "___",
     "dateInvalid": "Choisis une date valide.",
     "timeInvalid": "L’heure doit être HHMM (ex. 1630).",
     "calendarMissing": "Sélecteur calendrier non installé. Saisis JJMM ; le calendrier est optionnel.",
-    "active": "Actives",
-    "done": "Terminées",
+    "active": "Actif",
+    "done": "Terminé",
     "review": "À valider",
     "selectedDate": "Date sélectionnée",
     "dateNotSet": "—",
-    "repeatFor": "Répéter la tâche pour",
-    "repeatDaysPlaceholder": "___"
+    "badge": {
+      "open": "Ouvert",
+      "done": "Terminé"
+    }
   },
   "today": {
     "title": "Aujourd’hui",
@@ -1857,123 +2200,81 @@ const fr = {
     "stats": {
       "parents": "Parents",
       "kids": "Enfants",
-      "todayDone": "Terminé aujourd’hui"
+      "todayDone": "Terminé aujourd’hui",
+      "done": "Terminé",
+      "family": "Toutes les tâches familiales"
     },
     "defaultParent": "Parent",
     "defaultChild": "Enfant",
     "role": {
       "parent": "Parent",
-      "child": "Enfant"
+      "child": "Enfant",
+      "mom": "Maman",
+      "dad": "Papa"
     },
     "doneToday": "Fait aujourd’hui",
-    "noFamilyTitle": "Vous n’êtes pas encore dans une famille.",
-    "noFamilyBody": "Rejoignez/créez une famille dans Réglages → Famille.",
-    "countLine": "{{n}} membres",
-    "actions": {
-      "subtitle": "Modifier le membre",
-      "roleTitle": "Rôle",
-      "rename": "Renommer",
-      "remove": "Retirer"
-    },
-    "rename": {
-      "title": "Renommer",
-      "placeholder": "Nouveau nom"
-    },
-    "lastParent": {
-      "cantChangeRole": "Vous ne pouvez pas changer le rôle du dernier parent. Ajoutez d’abord un autre parent.",
-      "cantRemove": "Vous ne pouvez pas retirer le dernier parent. Ajoutez d’abord un autre parent.",
-      "notice": "C’est le dernier parent, vous ne pouvez pas changer son rôle ni le retirer."
-    },
-    "remove": {
-      "title": "Retirer le membre ?",
-      "body": "Les tâches restent, mais le membre est retiré et les assignations sont supprimées."
-    },
-    "fallbackMember": "Membre",
-    "changeOwnNameHint": "Modifiez votre nom dans Paramètres → Famille.",
-    "memberFallback": "Membre",
+    "changeOwnNameHint": "Change ton nom dans Réglages → Profil.",
     "editMember": "Modifier le membre",
-    "roleTitle": "Rôle",
-    "lastParentNotice": "C'est le dernier parent, vous ne pouvez donc pas changer son rôle ni le supprimer.",
+    "hello": "Salut",
+    "lastParentCantChangeRole": "Tu ne peux pas changer le rôle du dernier parent. Ajoute d’abord un autre parent.",
+    "lastParentCantRemove": "Tu ne peux pas supprimer le dernier parent. Ajoute d’abord un autre parent.",
+    "lastParentNotice": "C’est le dernier parent, tu ne peux donc pas changer son rôle ni le supprimer.",
+    "memberFallback": "Membre",
+    "newNamePlaceholder": "Nouveau nom",
+    "noFamilyBody": "Rejoins/crée une famille dans Réglages → Famille.",
+    "noFamilyTitle": "Tu n’es pas encore dans une famille.",
+    "overview": "Voici un aperçu des activités de ta famille.",
+    "removeBody": "Les tâches restent, mais le membre est supprimé et toutes les attributions le concernant sont effacées.",
     "removeTitle": "Supprimer le membre ?",
-    "removeBody": "Les tâches restent, mais le membre est supprimé et ses attributions sont effacées.",
-    "count": "{{n}} membres",
-    "newNamePlaceholder": "Nouveau nom"
+    "roleTitle": "Rôle",
+    "parent": "Parent",
+    "child": "Enfant",
+    "editHintLongPress": "Astuce : appuie longuement sur un membre pour modifier."
   },
   "auth": {
+    "tagline": "Tâches familiales, simplifiées",
+    "title": "Connexion",
+    "registerTitle": "Créer un compte",
+    "email": "E‑mail",
+    "password": "Mot de passe",
+    "confirmPassword": "Confirmer le mot de passe",
+    "togglePassword": "Afficher ou masquer le mot de passe",
+    "placeholders": {
+      "email": "nom@email.com",
+      "password": "••••••••",
+      "confirmPassword": "••••••••"
+    },
+    "passwordLoginBtn": "Se connecter",
+    "registerBtn": "Créer un compte",
+    "forgotPasswordBtn": "Mot de passe oublié ?",
+    "sendMagicLinkBtn": "Envoyer un magic link",
+    "noAccount": "Pas de compte ?",
+    "createAccount": "En créer un",
+    "haveAccount": "Déjà un compte ?",
+    "backToLogin": "Connexion",
+    "alerts": {
+      "missingEmailPasswordBody": "Saisis l’e‑mail et le mot de passe.",
+      "missingEmailBody": "Saisis ton e‑mail.",
+      "missingRegisterBody": "Saisis l’e‑mail et les deux champs de mot de passe.",
+      "weakPasswordBody": "Le mot de passe doit contenir au moins 6 caractères.",
+      "passwordMismatchBody": "Les mots de passe ne correspondent pas.",
+      "loginErrorTitle": "Erreur de connexion",
+      "resetSentBody": "Nous t’avons envoyé un e‑mail avec un lien pour définir un nouveau mot de passe.",
+      "resetErrorTitle": "Erreur de réinitialisation",
+      "magicLinkSentBody": "Un magic link a été envoyé à ton e‑mail.",
+      "magicLinkErrorTitle": "Erreur magic link",
+      "registerConfirmEmailBody": "Compte créé. Confirme ton adresse e‑mail via le lien envoyé, puis connecte‑toi.",
+      "registerOkBody": "Compte créé. Tu peux te connecter maintenant.",
+      "registerErrorTitle": "Erreur d’inscription"
+    },
     "missingUid": "Vous n’êtes pas connecté (ID membre manquant).",
-    "invalidEmail": "Saisissez une adresse e‑mail valide.",
-    "magicLinkSent": "Vérifiez votre e‑mail pour le lien de connexion.",
-    "magicLinkHelp": "Nous vous enverrons un lien de connexion par e‑mail.",
-    "loginMagicLink": "Connexion (lien magique)",
+    "invalidEmail": "Saisis un e‑mail valide.",
+    "magicLinkSent": "Vérifie ton e‑mail pour le lien de connexion.",
+    "magicLinkHelp": "Nous t’enverrons un lien de connexion par e‑mail.",
+    "loginMagicLink": "Connexion (magic link)",
     "sendLink": "Envoyer le lien",
     "logout": "Déconnexion",
     "signedInAs": "Connecté en tant que :"
-  },
-  "home": {
-    "anytimeTitle": "N’importe quand",
-    "anytimeHint": "Sans échéance",
-    "badge": {
-      "attention": "ATTN"
-    },
-    "doneTitle": "Terminé",
-    "doneHint": "Récemment terminé",
-    "emptyTitle": "Aucune tâche",
-    "emptySubtitle": "Ajoutez des tâches pour commencer.",
-    "familyPrefix": "Famille",
-    "filterPrefix": "Filtre",
-    "reviewTitle": "À approuver",
-    "reviewHint": "En attente de votre décision",
-    "reviewHintChild": "En attente du parent",
-    "scope": {
-      "family": "Famille",
-      "kids": "Enfants",
-      "me": "Moi"
-    },
-    "status": {
-      "open": "Ouvert"
-    },
-    "subtitle": "Aperçu rapide",
-    "tabAll": "Tous",
-    "tabKids": "Enfants",
-    "tabMe": "Moi",
-    "tagline": "Les tâches familiales, simplifiées",
-    "todayHint": "Focus",
-    "todayTitle": "Aujourd’hui",
-    "upcomingHint": "7 prochains jours",
-    "upcomingTitle": "À venir",
-    "stats": {
-      "active": "Actives",
-      "review": "À approuver",
-      "done": "Terminées"
-    },
-    "brandTitle": "FamiGo",
-    "scopeHint": {
-      "me": "Tâches pour vous",
-      "kids": "Tâches pour tous les enfants",
-      "family": "Toutes les tâches de la famille"
-    },
-    "info": {
-      "scope": {
-        "title": "Vues",
-        "body": "Choisissez quelles tâches afficher : Famille, Enfants ou Moi."
-      },
-      "review": {
-        "title": "En attente d’approbation",
-        "body": {
-          "parent": "Approuvez ou refusez les tâches demandées comme terminées.",
-          "child": "Quand vous demandez la validation, un parent doit approuver."
-        }
-      },
-      "actions": {
-        "title": "Boutons",
-        "open": "Prendre — prenez la tâche pour vous.",
-        "claimed": "Demander validation — demandez à un parent d’approuver.",
-        "review": {
-          "parent": "Approuver / Refuser — décidez si c’est fait.",
-          "child": "En attente — un parent va approuver ou refuser."
-        }
-      }
-    }
   },
   "shopping": {
     "addBtn": "Ajouter",
@@ -1991,28 +2292,92 @@ const fr = {
     "suggestedBy": "Suggéré par",
     "toBuy": "À acheter",
     "title": "Courses",
-    "chip": {
-      "detergent": "Lessive",
-      "toiletPaper": "Papier toilette",
-      "water": "Eau",
-      "milk": "Lait",
-      "bread": "Pain",
-      "eggs": "Oeufs",
-      "fruit": "Fruits",
-      "vegetables": "Légumes",
-      "meat": "Viande",
-      "cheese": "Fromage",
-      "shampoo": "Shampooing",
-      "dishSoap": "Liquide vaisselle"
-    },
-    "bought7days": "Acheté (7 jours)",
-    "bought7d": "Acheté (7 jours)",
-    "bought": "Acheté",
-    "boughtEmptyTitle": "Aucun achat récent",
-    "boughtEmptyBody": "Les articles achetés ces 7 derniers jours s’afficheront ici.",
-    "addedBy": "Ajouté par",
+    "goShop": "Aller faire les courses",
+    "sendTitle": "Envoyer la liste",
+    "sendPick": "Choisis qui va faire les courses.",
+    "sendEmpty": "La liste est vide.",
+    "sendHeader": "Qui va faire les courses ?",
+    "sendHint": "Envoie toute la liste en une seule notification (sans spam).",
+    "sentTitle": "Envoyé",
+    "sentBody": "La notification de la liste de courses a été envoyée.",
     "addedAt": "Ajouté",
-    "boughtWhen": "Acheté"
+    "addedBy": "Ajouté par",
+    "bought": "Acheté",
+    "bought7d": "Acheté (7 jours)",
+    "boughtEmptyTitle": "Aucun achat récent",
+    "boughtEmptyBody": "Les articles marqués comme achetés apparaîtront ici pendant 7 jours.",
+    "boughtWhen": "Acheté",
+    "chip": {
+      "bread": "Pain",
+      "cheese": "Fromage",
+      "detergent": "Lessive",
+      "dishSoap": "Liquide vaisselle",
+      "eggs": "Œufs",
+      "fruit": "Fruits",
+      "meat": "Viande",
+      "milk": "Lait",
+      "shampoo": "Shampooing",
+      "toiletPaper": "Papier toilette",
+      "vegetables": "Légumes",
+      "water": "Eau"
+    }
+  },
+  "home": {
+    "title": "Tâches du jour",
+    "subtitle": "Aperçu rapide et focus",
+    "plannerToday": "Agenda — aujourd’hui",
+    "tasksLatest": "Tâches — récentes",
+    "shopping": "Courses",
+    "shoppingCartCount": "Vous avez {{count}} articles dans le panier",
+    "viewMore": "Voir plus",
+    "noFamilyShopping": "Rejoignez ou créez une famille pour utiliser la liste de courses partagée.",
+    "noTime": "N’importe quand",
+    "shoppingEmpty": "La liste de courses est vide",
+    "plannerEmptyMe": "Rien de prévu aujourd’hui",
+    "plannerEmptyKids": "Rien de prévu pour les enfants",
+    "plannerEmptyFamily": "Rien de prévu aujourd’hui",
+    "plannerEmptyFamilySub": "Planifiez une petite chose ✨",
+    "plannerEmptySub": "Tout est clair 🙂",
+    "tasksEmptyMe": "Aucune tâche pour vous",
+    "tasksEmptyKids": "Les enfants n’ont aucune tâche",
+    "tasksEmptyFamily": "Aucune tâche en cours",
+    "tasksEmptySub": "Tout est nickel. Continuez comme ça 😄",
+  },
+
+
+  "planner": {
+    "title": "Planning",
+    "subtitle": "Votre plan quotidien simple (privé ou partagé).",
+    "selectedDay": "Sélectionné",
+    "hintPickDay": "Choisis un jour sur le calendrier, puis touche + Nouveau",
+    "newBtn": "+ Nouveau",
+    "newTitle": "Nouveau plan",
+    "editTitle": "Modifier le plan",
+    "placeholder": {
+      "title": "ex. médecin, payer les factures, appeler mamie"
+    },
+    "timeLabel": "Heure (optionnel)",
+    "timePlaceholder": "HHMM (ex. 1630)",
+    "anytime": "N'importe",
+    "for": "Pour",
+    "shared": "Partagé",
+    "forWho": "Pour qui ?",
+    "family": "Famille",
+    "someone": "Quelqu’un",
+    "assigned": {
+      "all": "Famille",
+      "some": "Sélectionné"
+    },
+    "someHint": "Astuce : sélectionne un ou plusieurs membres. (Appui long pour supprimer)",
+    "noFamilyHint": "Astuce : rejoins une famille pour partager un plan avec un membre.",
+    "noStorage": "Remarque : AsyncStorage n'est pas installé, donc les plans seront réinitialisés au rechargement de l'app.",
+    "calendarMissing": "Le composant calendrier n'est pas installé. Pour la vue mensuelle, installe react-native-calendars.",
+    "emptyTitle": "Aucun plan pour l’instant",
+    "emptyBody": "Touche + Nouveau et ajoute ton premier plan pour ce jour.",
+    "titleRequired": "Le titre est obligatoire.",
+    "timeInvalid": "L'heure doit être au format HH:MM (ex. 1630).",
+    "pickSomeone": "Choisis au moins un membre.",
+    "deleteConfirm": "Supprimer cet élément ?"
   }
 };
 
@@ -2021,8 +2386,28 @@ const de = {
     "home": "Heute",
     "members": "Mitglieder",
     "tasks": "Aufgaben",
-    "settings": "Einstellungen",
-    "shopping": "Einkauf"
+    "shopping": "Einkauf",
+    "settings": "Einstellungen"
+  },
+  "onboarding": {
+    "profile": {
+      "title": "Richte dein Profil ein",
+      "subtitle": "So kann die Familie erkennen, wer wer ist.",
+      "name": "Dein Name",
+      "role": "Du bist",
+      "gender": "Geschlecht",
+      "male": "Männlich",
+      "female": "Weiblich",
+      "autoAvatar": "Avatar wird automatisch gesetzt"
+    },
+    "family": {
+      "title": "Familie beitreten oder erstellen",
+      "subtitle": "Du kannst mit einem Code beitreten oder eine neue Familie erstellen.",
+      "joinTitle": "Bestehender Familie beitreten",
+      "joinSub": "Gib den Familiencode ein, den du von einem Elternteil erhalten hast.",
+      "createTitle": "Neue Familie erstellen",
+      "createSub": "Wähle einen Familiennamen und lade andere später ein."
+    }
   },
   "common": {
     "loading": "Laden...",
@@ -2034,15 +2419,31 @@ const de = {
     "copied": "Kopiert.",
     "copyFailed": "Kopieren nicht möglich.",
     "all": "Alle",
-    "info": "Info",
-    "me": "Ich",
     "on": "An",
     "off": "Aus",
-    "success": "Erfolg"
+    "info": "Info",
+    "me": "Ich",
+    "remove": "Entfernen",
+    "rename": "Umbenennen",
+    "success": "Erfolg",
+    "male": "Männlich",
+    "female": "Weiblich",
+    "back": "Zurück",
+    "continue": "Weiter",
+    "create": "Erstellen",
+    "join": "Beitreten"
   },
   "settings": {
     "title": "Einstellungen",
     "subtitle": "Familie, Sprache und Profil",
+    "setup": {
+      "title": "Konto einrichten",
+      "step1": "1) Einer Familie beitreten oder eine erstellen",
+      "step2": "2) Dann deinen Namen in Einstellungen → Familie setzen",
+      "whyName": "Dein Name wird als Familienmitglied gespeichert und ist nach dem Beitritt verfügbar.",
+      "next": "Nächster Schritt",
+      "setNameNow": "Lege deinen Namen fest, damit andere dich erkennen."
+    },
     "language": "Sprache",
     "languageHint": "Wähle die Sprache der Oberfläche.",
     "languageNote": "Diese Änderung gilt für die gesamte App.",
@@ -2058,8 +2459,6 @@ const de = {
       "notInFamily": "Du bist in keiner Familie.",
       "statusLine": "Familie: {{name}} (Einladung: {{code}})",
       "title": "Familie",
-      "nextStepTitle": "Nächster Schritt",
-      "nextStepBody": "Bitte lege deinen Namen fest, damit dich andere erkennen können.",
       "notInFamilyTitle": "Noch keine Familie"
     },
     "about": "Über",
@@ -2072,12 +2471,11 @@ const de = {
       "editName": "Name bearbeiten",
       "copy": "Kopieren",
       "renameFamily": "Umbenennen",
-      "setYourName": "Namen festlegen",
+      "setName": "Namen festlegen",
       "leaveFamily": "Familie verlassen",
       "deleteFamily": "Familie löschen",
       "showInviteCode": "Einladungscode anzeigen",
-      "setName": "Namen festlegen",
-      "hideInviteCode": "Einladungscode verbergen",
+      "hideInviteCode": "Einladungscode ausblenden",
       "createFamily": "Familie erstellen",
       "joinFamily": "Familie beitreten",
       "join": "Beitreten"
@@ -2094,12 +2492,17 @@ const de = {
     "labels": {
       "family": "Familie",
       "inviteCode": "Einladungscode",
-      "yourName": "Dein Name",
       "myName": "Dein Name"
     },
-    "notSet": "Nicht festgelegt",
-    "onlyMemberDeleteHint": "Du kannst die Familie nur löschen, wenn du das einzige Mitglied bist.",
-    "nameAfterJoin": "Tritt einer Familie bei oder erstelle eine, um deinen Namen zu setzen.",
+    "notSet": "Nicht gesetzt",
+    "nameAfterJoin": "Tritt einer Familie bei oder erstelle eine, um deinen Namen festzulegen.",
+    "deleteFamily": {
+      "help": "Du kannst die Familie nur löschen, wenn du das einzige Mitglied bist.",
+      "title": "Familie löschen",
+      "body": "Dies löscht die Familie und alle Daten dauerhaft.",
+      "confirm": "Gib DELETE ein, um zu bestätigen.",
+      "deleted": "Familie gelöscht."
+    },
     "joinFamily": {
       "help": "Gib einen Einladungscode von einem Familienmitglied ein.",
       "title": "Familie beitreten",
@@ -2109,32 +2512,18 @@ const de = {
     },
     "createFamily": {
       "title": "Familie erstellen",
-      "desc": "Erstelle eine neue Familie und lade andere ein.",
+      "desc": "Erstelle eine neue Familie, um Aufgaben zu teilen.",
       "placeholder": "Familienname",
-      "nameRequired": "Gib einen Familiennamen ein.",
+      "nameRequired": "Familienname ist erforderlich.",
       "created": "Familie erstellt."
-    },
-    "deleteFamily": {
-      "title": "Familie löschen",
-      "body": "Dadurch wird die Familie und alle Daten gelöscht. Das kann nicht rückgängig gemacht werden.",
-      "confirm": "Löschen",
-      "deleted": "Familie gelöscht.",
-      "help": "Du kannst die Familie nur löschen, wenn du das einzige Mitglied bist."
-    },
-    "setup": {
-      "title": "Konto einrichten",
-      "step1": "1) Einer Familie beitreten oder erstellen",
-      "step2": "2) Danach Namen in Einstellungen → Familie setzen",
-      "whyName": "Dein Name wird als Familienmitglied gespeichert und ist erst nach dem Beitritt verfügbar.",
-      "next": "Nächster Schritt",
-      "setNameNow": "Bitte setze deinen Namen, damit andere dich erkennen."
     },
     "leaveFamily": {
       "title": "Familie verlassen",
-      "body": "Möchtest du die Familie wirklich verlassen?",
+      "body": "Bist du sicher, dass du die Familie verlassen möchtest?",
       "confirm": "Verlassen",
       "left": "Du hast die Familie verlassen."
-    }
+    },
+    "myProfile": "Mein Profil"
   },
   "tasks": {
     "status": {
@@ -2148,6 +2537,10 @@ const de = {
       "active": "Aktiv",
       "review": "Zur Freigabe",
       "done": "Erledigt"
+    },
+    "timelineHint": {
+      "assigned": "Zugewiesen → Erledigt → Genehmigt",
+      "created": "Erstellt → Erledigt → Genehmigt"
     },
     "hideDoneOn": "Erledigte ausblenden: AN",
     "hideDoneOff": "Erledigte ausblenden: AUS",
@@ -2194,13 +2587,30 @@ const de = {
     "assign": {
       "none": "Nicht zugewiesen",
       "select": "Auswählen",
+      "selectCta": "Auswählen",
       "clear": "Auswahl löschen"
     },
     "title": "Aufgaben",
     "heroSub": "Schnelle Filter & Übersicht",
-    "new": "+ Neu",
+    "newBtn": "+ Neu",
+    "new": {
+      "title": "Neue Aufgabe für ein Familienmitglied erstellen",
+      "placeholder": {
+        "title": "z. B. Luka zum Training bringen",
+        "time": "z. B. 16:30"
+      },
+      "hint": {
+        "timeOptional": "Optional: Stelle eine Uhrzeit ein, um Erinnerungen zu aktivieren."
+      },
+      "repeatEveryDays": "Wiederholen alle",
+      "assignTo": "Wer soll das machen?"
+    },
     "newPrompt": "Was kannst du heute erledigen?",
     "when": "Wann?",
+    "reminder": {
+      "label": "Erinnerung",
+      "requiresTime": "Stelle eine Uhrzeit ein, um Erinnerungen zu aktivieren."
+    },
     "needsApproval": "Zur Freigabe",
     "nextDue": "Nächster Termin",
     "action": {
@@ -2209,19 +2619,28 @@ const de = {
       "requestDone": "Erledigt anfragen",
       "approve": "Freigeben",
       "reject": "Ablehnen",
-      "doneAuto": "Erledigt"
+      "doneAuto": "Erledigt",
+      "illDoIt": "Ich mache es",
+      "leave": "Verlassen",
+      "markDone": "Als erledigt markieren",
+      "notDone": "Nicht erledigt",
+      "accept": "Annehmen",
+      "take": "Übernehmen"
     },
     "repeatEveryPlaceholder": "Alle ___ Tage wiederholen (nur Zahlen)",
+    "repeatDaysPlaceholder": "___",
     "dateInvalid": "Wähle ein gültiges Datum.",
     "timeInvalid": "Zeit muss HHMM sein (z. B. 1630).",
     "calendarMissing": "Kalenderauswahl nicht installiert. Gib TTMM ein; Kalender ist optional.",
     "active": "Aktiv",
     "done": "Erledigt",
-    "review": "Zur Freigabe",
+    "review": "Zur Bestätigung",
     "selectedDate": "Ausgewähltes Datum",
     "dateNotSet": "—",
-    "repeatFor": "Aufgabe wiederholen alle",
-    "repeatDaysPlaceholder": "___"
+    "badge": {
+      "open": "Offen",
+      "done": "Erledigt"
+    }
   },
   "today": {
     "title": "Heute",
@@ -2259,123 +2678,81 @@ const de = {
     "stats": {
       "parents": "Eltern",
       "kids": "Kinder",
-      "todayDone": "Heute erledigt"
+      "todayDone": "Heute erledigt",
+      "done": "Erledigt",
+      "family": "Alle Familienaufgaben"
     },
     "defaultParent": "Elternteil",
     "defaultChild": "Kind",
     "role": {
       "parent": "Elternteil",
-      "child": "Kind"
+      "child": "Kind",
+      "mom": "Mama",
+      "dad": "Papa"
     },
     "doneToday": "Heute erledigt",
-    "noFamilyTitle": "Du bist noch in keiner Familie.",
-    "noFamilyBody": "Tritt einer Familie bei oder erstelle eine in Einstellungen → Familie.",
-    "countLine": "{{n}} Mitglieder",
-    "actions": {
-      "subtitle": "Mitglied bearbeiten",
-      "roleTitle": "Rolle",
-      "rename": "Umbenennen",
-      "remove": "Entfernen"
-    },
-    "rename": {
-      "title": "Umbenennen",
-      "placeholder": "Neuer Name"
-    },
-    "lastParent": {
-      "cantChangeRole": "Du kannst die Rolle des letzten Elternteils nicht ändern. Füge zuerst einen weiteren Elternteil hinzu.",
-      "cantRemove": "Du kannst den letzten Elternteil nicht entfernen. Füge zuerst einen weiteren Elternteil hinzu.",
-      "notice": "Das ist der letzte Elternteil, daher kannst du seine Rolle nicht ändern oder ihn entfernen."
-    },
-    "remove": {
-      "title": "Mitglied entfernen?",
-      "body": "Aufgaben bleiben bestehen, aber das Mitglied wird entfernt und Zuweisungen werden gelöscht."
-    },
-    "fallbackMember": "Mitglied",
-    "changeOwnNameHint": "Ändere deinen Namen in Einstellungen → Familie.",
-    "memberFallback": "Mitglied",
+    "changeOwnNameHint": "Ändere deinen Namen in Einstellungen → Profil.",
     "editMember": "Mitglied bearbeiten",
-    "roleTitle": "Rolle",
-    "lastParentNotice": "Das ist das letzte Elternteil – du kannst die Rolle nicht ändern oder die Person entfernen.",
+    "hello": "Hallo",
+    "lastParentCantChangeRole": "Du kannst die Rolle des letzten Elternteils nicht ändern. Füge zuerst ein weiteres Elternteil hinzu.",
+    "lastParentCantRemove": "Du kannst den letzten Elternteil nicht entfernen. Füge zuerst ein weiteres Elternteil hinzu.",
+    "lastParentNotice": "Das ist der letzte Elternteil – du kannst seine Rolle nicht ändern oder ihn entfernen.",
+    "memberFallback": "Mitglied",
+    "newNamePlaceholder": "Neuer Name",
+    "noFamilyBody": "Tritt einer Familie bei/erstelle eine Familie unter Einstellungen → Familie.",
+    "noFamilyTitle": "Du bist noch in keiner Familie.",
+    "overview": "Hier ist eine Übersicht über eure Familienaktivitäten.",
+    "removeBody": "Aufgaben bleiben erhalten, aber das Mitglied wird entfernt und alle Zuweisungen an diese Person werden gelöscht.",
     "removeTitle": "Mitglied entfernen?",
-    "removeBody": "Aufgaben bleiben erhalten, aber das Mitglied wird entfernt und Zuweisungen werden gelöscht.",
-    "count": "{{n}} Mitglieder",
-    "newNamePlaceholder": "Neuer Name"
+    "roleTitle": "Rolle",
+    "parent": "Elternteil",
+    "child": "Kind",
+    "editHintLongPress": "Tipp: Mitglied lange drücken zum Bearbeiten."
   },
   "auth": {
+    "tagline": "Familienaufgaben, ganz einfach",
+    "title": "Anmelden",
+    "registerTitle": "Konto erstellen",
+    "email": "E‑Mail",
+    "password": "Passwort",
+    "confirmPassword": "Passwort bestätigen",
+    "togglePassword": "Passwort anzeigen oder verbergen",
+    "placeholders": {
+      "email": "name@email.com",
+      "password": "••••••••",
+      "confirmPassword": "••••••••"
+    },
+    "passwordLoginBtn": "Anmelden",
+    "registerBtn": "Konto erstellen",
+    "forgotPasswordBtn": "Passwort vergessen?",
+    "sendMagicLinkBtn": "Magic Link senden",
+    "noAccount": "Noch kein Konto?",
+    "createAccount": "Jetzt erstellen",
+    "haveAccount": "Schon ein Konto?",
+    "backToLogin": "Anmelden",
+    "alerts": {
+      "missingEmailPasswordBody": "E‑Mail und Passwort eingeben.",
+      "missingEmailBody": "E‑Mail eingeben.",
+      "missingRegisterBody": "E‑Mail und beide Passwortfelder eingeben.",
+      "weakPasswordBody": "Das Passwort muss mindestens 6 Zeichen lang sein.",
+      "passwordMismatchBody": "Passwörter stimmen nicht überein.",
+      "loginErrorTitle": "Anmeldefehler",
+      "resetSentBody": "Wir haben dir eine E‑Mail mit einem Link zum Zurücksetzen des Passworts gesendet.",
+      "resetErrorTitle": "Reset‑Fehler",
+      "magicLinkSentBody": "Der Magic Link wurde an deine E‑Mail gesendet.",
+      "magicLinkErrorTitle": "Magic‑Link‑Fehler",
+      "registerConfirmEmailBody": "Konto erstellt. Bitte bestätige deine E‑Mail über den Link und melde dich dann an.",
+      "registerOkBody": "Konto erstellt. Du kannst dich jetzt anmelden.",
+      "registerErrorTitle": "Registrierungsfehler"
+    },
     "missingUid": "Du bist nicht angemeldet (Mitglieds‑ID fehlt).",
     "invalidEmail": "Gib eine gültige E‑Mail ein.",
     "magicLinkSent": "Prüfe deine E‑Mail für den Anmelde‑Link.",
-    "magicLinkHelp": "Wir schicken dir einen Anmelde‑Link per E‑Mail.",
+    "magicLinkHelp": "Wir senden dir einen Anmelde‑Link per E‑Mail.",
     "loginMagicLink": "Anmelden (Magic Link)",
     "sendLink": "Link senden",
     "logout": "Abmelden",
     "signedInAs": "Angemeldet als:"
-  },
-  "home": {
-    "anytimeTitle": "Jederzeit",
-    "anytimeHint": "Kein Termin",
-    "badge": {
-      "attention": "ACHT"
-    },
-    "doneTitle": "Erledigt",
-    "doneHint": "Kürzlich erledigt",
-    "emptyTitle": "Keine Aufgaben",
-    "emptySubtitle": "Füge Aufgaben hinzu, um zu starten.",
-    "familyPrefix": "Familie",
-    "filterPrefix": "Filter",
-    "reviewTitle": "Zur Freigabe",
-    "reviewHint": "Wartet auf deine Entscheidung",
-    "reviewHintChild": "Wartet auf Eltern",
-    "scope": {
-      "family": "Familie",
-      "kids": "Kinder",
-      "me": "Ich"
-    },
-    "status": {
-      "open": "Offen"
-    },
-    "subtitle": "Schnellübersicht",
-    "tabAll": "Alle",
-    "tabKids": "Kinder",
-    "tabMe": "Ich",
-    "tagline": "Familienaufgaben, ganz einfach",
-    "todayHint": "Fokus",
-    "todayTitle": "Heute",
-    "upcomingHint": "Nächste 7 Tage",
-    "upcomingTitle": "Bevorstehend",
-    "stats": {
-      "active": "Aktiv",
-      "review": "Zur Freigabe",
-      "done": "Erledigt"
-    },
-    "brandTitle": "FamiGo",
-    "scopeHint": {
-      "me": "Aufgaben für dich",
-      "kids": "Aufgaben für alle Kinder",
-      "family": "Alle Familienaufgaben"
-    },
-    "info": {
-      "scope": {
-        "title": "Ansichten",
-        "body": "Wähle, wessen Aufgaben angezeigt werden: Familie, Kinder oder Ich."
-      },
-      "review": {
-        "title": "Wartet auf Freigabe",
-        "body": {
-          "parent": "Genehmige oder lehne Aufgaben ab, die als erledigt gemeldet wurden.",
-          "child": "Wenn du „Erledigt anfragen“ drückst, muss ein Elternteil bestätigen."
-        }
-      },
-      "actions": {
-        "title": "Buttons",
-        "open": "Übernehmen — nimm die Aufgabe für dich.",
-        "claimed": "Fertig anfragen — bitte ein Elternteil um Freigabe.",
-        "review": {
-          "parent": "Genehmigen / Ablehnen — entscheide, ob erledigt.",
-          "child": "Warten — ein Elternteil entscheidet."
-        }
-      }
-    }
   },
   "shopping": {
     "addBtn": "Hinzufügen",
@@ -2393,28 +2770,92 @@ const de = {
     "suggestedBy": "Vorgeschlagen von",
     "toBuy": "Zu kaufen",
     "title": "Einkauf",
+    "goShop": "Einkaufen gehen",
+    "sendTitle": "Liste senden",
+    "sendPick": "Wähle, wer einkaufen geht.",
+    "sendEmpty": "Die Liste ist leer.",
+    "sendHeader": "Wer geht einkaufen?",
+    "sendHint": "Sende die ganze Liste als eine Benachrichtigung (kein Spam).",
+    "sentTitle": "Gesendet",
+    "sentBody": "Die Einkaufslisten-Benachrichtigung wurde gesendet.",
+    "addedAt": "Hinzugefügt",
+    "addedBy": "Hinzugefügt von",
+    "bought": "Gekauft",
+    "bought7d": "Gekauft (7 Tage)",
+    "boughtEmptyTitle": "Keine kürzlichen Einkäufe",
+    "boughtEmptyBody": "Artikel, die du als gekauft markierst, erscheinen hier 7 Tage lang.",
+    "boughtWhen": "Gekauft",
     "chip": {
-      "detergent": "Waschmittel",
-      "toiletPaper": "Toilettenpapier",
-      "water": "Wasser",
-      "milk": "Milch",
       "bread": "Brot",
+      "cheese": "Käse",
+      "detergent": "Waschmittel",
+      "dishSoap": "Spülmittel",
       "eggs": "Eier",
       "fruit": "Obst",
-      "vegetables": "Gemüse",
       "meat": "Fleisch",
-      "cheese": "Käse",
+      "milk": "Milch",
       "shampoo": "Shampoo",
-      "dishSoap": "Spülmittel"
+      "toiletPaper": "Toilettenpapier",
+      "vegetables": "Gemüse",
+      "water": "Wasser"
+    }
+  },
+  "home": {
+    "title": "Tägliche Aufgaben",
+    "subtitle": "Schneller Überblick und Fokus",
+    "plannerToday": "Planer — heute",
+    "tasksLatest": "Aufgaben — neueste",
+    "shopping": "Einkaufen",
+    "shoppingCartCount": "Du hast {{count}} Artikel im Warenkorb",
+    "viewMore": "Mehr anzeigen",
+    "noFamilyShopping": "Tritt einer Familie bei oder erstelle eine, um die gemeinsame Einkaufsliste zu nutzen.",
+    "noTime": "Jederzeit",
+    "shoppingEmpty": "Die Einkaufsliste ist leer",
+    "plannerEmptyMe": "Heute nichts geplant",
+    "plannerEmptyKids": "Für Kinder ist nichts geplant",
+    "plannerEmptyFamily": "Heute nichts geplant",
+    "plannerEmptyFamilySub": "Plane eine Kleinigkeit ✨",
+    "plannerEmptySub": "Alles klar 🙂",
+    "tasksEmptyMe": "Keine Aufgaben für dich",
+    "tasksEmptyKids": "Kinder haben keine Aufgaben",
+    "tasksEmptyFamily": "Keine offenen Aufgaben",
+    "tasksEmptySub": "Sieht sauber aus. Bleib dabei 😄",
+  },
+
+
+  "planner": {
+    "title": "Planer",
+    "subtitle": "Dein einfacher Tagesplan (privat oder geteilt).",
+    "selectedDay": "Ausgewählt",
+    "hintPickDay": "Wähle einen Tag im Kalender und tippe dann auf + Neu",
+    "newBtn": "+ Neu",
+    "newTitle": "Neuer Plan",
+    "editTitle": "Plan bearbeiten",
+    "placeholder": {
+      "title": "z.B. Arzt, Rechnungen zahlen, Oma anrufen"
     },
-    "bought7days": "Gekauft (7 Tage)",
-    "bought7d": "Gekauft (7 Tage)",
-    "bought": "Gekauft",
-    "boughtEmptyTitle": "Keine recenten Einkäufe",
-    "boughtEmptyBody": "Hier werden Artikel angezeigt, die in den letzten 7 Tagen gekauft wurden.",
-    "addedBy": "Hinzugefügt von",
-    "addedAt": "Hinzugefügt",
-    "boughtWhen": "Gekauft"
+    "timeLabel": "Uhrzeit (optional)",
+    "timePlaceholder": "HHMM (z.B. 1630)",
+    "anytime": "Beliebig",
+    "for": "Für",
+    "shared": "Geteilt",
+    "forWho": "Für wen?",
+    "family": "Familie",
+    "someone": "Jemand",
+    "assigned": {
+      "all": "Familie",
+      "some": "Ausgewählt"
+    },
+    "someHint": "Tipp: Wähle ein oder mehrere Mitglieder. (Langes Drücken zum Löschen)",
+    "noFamilyHint": "Tipp: Tritt einer Familie bei, um einen Plan mit einem Mitglied zu teilen.",
+    "noStorage": "Hinweis: AsyncStorage ist nicht installiert, daher werden Pläne beim Neuladen der App zurückgesetzt.",
+    "calendarMissing": "Die Kalender-Komponente ist nicht installiert. Für die Monatsansicht installiere react-native-calendars.",
+    "emptyTitle": "Noch keine Pläne",
+    "emptyBody": "Tippe auf + Neu und füge den ersten Plan für diesen Tag hinzu.",
+    "titleRequired": "Titel ist erforderlich.",
+    "timeInvalid": "Die Uhrzeit muss HH:MM sein (z.B. 1630).",
+    "pickSomeone": "Wähle mindestens ein Mitglied aus.",
+    "deleteConfirm": "Diesen Eintrag löschen?"
   }
 };
 
@@ -2423,8 +2864,28 @@ const es = {
     "home": "Hoy",
     "members": "Miembros",
     "tasks": "Tareas",
-    "settings": "Ajustes",
-    "shopping": "Compras"
+    "shopping": "Compras",
+    "settings": "Ajustes"
+  },
+  "onboarding": {
+    "profile": {
+      "title": "Configura tu perfil",
+      "subtitle": "Esto ayuda a la familia a reconocer quién es quién.",
+      "name": "Tu nombre",
+      "role": "Tú eres",
+      "gender": "Género",
+      "male": "Hombre",
+      "female": "Mujer",
+      "autoAvatar": "El avatar se configurará automáticamente"
+    },
+    "family": {
+      "title": "Únete o crea una familia",
+      "subtitle": "Puedes unirte con un código o crear una nueva familia.",
+      "joinTitle": "Unirse a una familia existente",
+      "joinSub": "Introduce el código de familia que te dio un padre/madre.",
+      "createTitle": "Crear una nueva familia",
+      "createSub": "Elige un nombre de familia e invita a otros más tarde."
+    }
   },
   "common": {
     "loading": "Cargando...",
@@ -2436,15 +2897,31 @@ const es = {
     "copied": "Copiado.",
     "copyFailed": "No se pudo copiar.",
     "all": "Todos",
-    "info": "Info",
-    "me": "Yo",
     "on": "Activado",
     "off": "Desactivado",
-    "success": "Éxito"
+    "info": "Info",
+    "me": "Yo",
+    "remove": "Eliminar",
+    "rename": "Renombrar",
+    "success": "Éxito",
+    "male": "Hombre",
+    "female": "Mujer",
+    "back": "Atrás",
+    "continue": "Continuar",
+    "create": "Crear",
+    "join": "Unirse"
   },
   "settings": {
     "title": "Ajustes",
     "subtitle": "Familia, idioma y perfil",
+    "setup": {
+      "title": "Configurar tu cuenta",
+      "step1": "1) Únete o crea una familia",
+      "step2": "2) Luego establece tu nombre en Ajustes → Familia",
+      "whyName": "Tu nombre se guarda como miembro de la familia y estará disponible tras unirte.",
+      "next": "Siguiente paso",
+      "setNameNow": "Establece tu nombre para que otros puedan reconocerte."
+    },
     "language": "Idioma",
     "languageHint": "Elige el idioma de la interfaz.",
     "languageNote": "Este cambio se aplica a toda la app.",
@@ -2460,9 +2937,7 @@ const es = {
       "notInFamily": "No estás en una familia.",
       "statusLine": "Familia: {{name}} (Invitación: {{code}})",
       "title": "Familia",
-      "nextStepTitle": "Siguiente paso",
-      "nextStepBody": "Establece tu nombre para que los demás puedan reconocerte.",
-      "notInFamilyTitle": "Aún sin familia"
+      "notInFamilyTitle": "Sin familia"
     },
     "about": "Acerca de",
     "account": "Cuenta",
@@ -2474,12 +2949,11 @@ const es = {
       "editName": "Editar nombre",
       "copy": "Copiar",
       "renameFamily": "Renombrar",
-      "setYourName": "Establecer tu nombre",
+      "setName": "Establecer nombre",
       "leaveFamily": "Salir de la familia",
       "deleteFamily": "Eliminar familia",
-      "showInviteCode": "Mostrar código de invitación",
-      "setName": "Establecer nombre",
-      "hideInviteCode": "Ocultar código de invitación",
+      "showInviteCode": "Mostrar código",
+      "hideInviteCode": "Ocultar código",
       "createFamily": "Crear familia",
       "joinFamily": "Unirse a la familia",
       "join": "Unirse"
@@ -2496,12 +2970,17 @@ const es = {
     "labels": {
       "family": "Familia",
       "inviteCode": "Código de invitación",
-      "yourName": "Tu nombre",
       "myName": "Tu nombre"
     },
     "notSet": "No establecido",
-    "onlyMemberDeleteHint": "Solo puedes eliminar la familia si eres el único miembro.",
     "nameAfterJoin": "Únete o crea una familia para establecer tu nombre.",
+    "deleteFamily": {
+      "help": "Solo puedes eliminar la familia si eres el único miembro.",
+      "title": "Eliminar familia",
+      "body": "Esto eliminará permanentemente la familia y todos sus datos.",
+      "confirm": "Escribe DELETE para confirmar.",
+      "deleted": "Familia eliminada."
+    },
     "joinFamily": {
       "help": "Introduce un código de invitación de un miembro de la familia.",
       "title": "Unirse a la familia",
@@ -2511,32 +2990,18 @@ const es = {
     },
     "createFamily": {
       "title": "Crear familia",
-      "desc": "Crea una nueva familia e invita a otros.",
+      "desc": "Crea una nueva familia para empezar a compartir tareas.",
       "placeholder": "Nombre de la familia",
-      "nameRequired": "Introduce un nombre de familia.",
+      "nameRequired": "El nombre de la familia es obligatorio.",
       "created": "Familia creada."
-    },
-    "deleteFamily": {
-      "title": "Eliminar familia",
-      "body": "Esto eliminará la familia y todos sus datos. No se puede deshacer.",
-      "confirm": "Eliminar",
-      "deleted": "Familia eliminada.",
-      "help": "Solo puedes eliminar la familia si eres el único miembro."
-    },
-    "setup": {
-      "title": "Configurar tu cuenta",
-      "step1": "1) Únete o crea una familia",
-      "step2": "2) Luego establece tu nombre en Ajustes → Familia",
-      "whyName": "Tu nombre se guarda como miembro de la familia, así que está disponible tras unirte.",
-      "next": "Siguiente paso",
-      "setNameNow": "Establece tu nombre para que otros puedan reconocerte."
     },
     "leaveFamily": {
       "title": "Salir de la familia",
       "body": "¿Seguro que quieres salir de la familia?",
       "confirm": "Salir",
       "left": "Has salido de la familia."
-    }
+    },
+    "myProfile": "Mi perfil"
   },
   "tasks": {
     "status": {
@@ -2550,6 +3015,10 @@ const es = {
       "active": "Activas",
       "review": "Para aprobar",
       "done": "Hechas"
+    },
+    "timelineHint": {
+      "assigned": "Asignado → Hecho → Aprobado",
+      "created": "Creado → Hecho → Aprobado"
     },
     "hideDoneOn": "Ocultar hechas: ON",
     "hideDoneOff": "Ocultar hechas: OFF",
@@ -2596,13 +3065,30 @@ const es = {
     "assign": {
       "none": "No asignado",
       "select": "Seleccionar",
+      "selectCta": "Seleccionar",
       "clear": "Borrar selección"
     },
     "title": "Tareas",
     "heroSub": "Filtros rápidos y vista general",
-    "new": "+ Nueva",
+    "newBtn": "+ Nuevo",
+    "new": {
+      "title": "Crea una nueva tarea para un miembro de la familia",
+      "placeholder": {
+        "title": "p. ej. Lleva a Luka al entrenamiento",
+        "time": "p. ej. 16:30"
+      },
+      "hint": {
+        "timeOptional": "Opcional: establece una hora para activar recordatorios."
+      },
+      "repeatEveryDays": "Repetir cada",
+      "assignTo": "¿Quién debe hacerlo?"
+    },
     "newPrompt": "¿Qué puedes hacer hoy?",
     "when": "¿Cuándo?",
+    "reminder": {
+      "label": "Recordatorio",
+      "requiresTime": "Establece una hora para activar recordatorios."
+    },
     "needsApproval": "Para aprobar",
     "nextDue": "Próximo vencimiento",
     "action": {
@@ -2611,19 +3097,28 @@ const es = {
       "requestDone": "Solicitar finalización",
       "approve": "Aprobar",
       "reject": "Rechazar",
-      "doneAuto": "Hecho"
+      "doneAuto": "Hecho",
+      "illDoIt": "Yo me encargo",
+      "leave": "Salir",
+      "markDone": "Marcar como hecho",
+      "notDone": "No hecho",
+      "accept": "Aceptar",
+      "take": "Tomar"
     },
     "repeatEveryPlaceholder": "Repetir cada ___ días (solo números)",
+    "repeatDaysPlaceholder": "___",
     "dateInvalid": "Elige una fecha válida.",
     "timeInvalid": "La hora debe ser HHMM (p. ej. 1630).",
     "calendarMissing": "Selector de calendario no instalado. Introduce DDMM; el calendario es opcional.",
     "active": "Activas",
     "done": "Hechas",
-    "review": "Por aprobar",
+    "review": "Para aprobar",
     "selectedDate": "Fecha seleccionada",
     "dateNotSet": "—",
-    "repeatFor": "Repetir tarea cada",
-    "repeatDaysPlaceholder": "___"
+    "badge": {
+      "open": "Abierto",
+      "done": "Hecho"
+    }
   },
   "today": {
     "title": "Hoy",
@@ -2661,123 +3156,81 @@ const es = {
     "stats": {
       "parents": "Padres",
       "kids": "Niños",
-      "todayDone": "Hecho hoy"
+      "todayDone": "Hecho hoy",
+      "done": "Hecho",
+      "family": "Todas las tareas familiares"
     },
     "defaultParent": "Padre/Madre",
     "defaultChild": "Niño",
     "role": {
       "parent": "Padre/Madre",
-      "child": "Niño"
+      "child": "Niño",
+      "mom": "Mamá",
+      "dad": "Papá"
     },
     "doneToday": "Hecho hoy",
-    "noFamilyTitle": "Aún no estás en una familia.",
-    "noFamilyBody": "Únete/crea una familia en Ajustes → Familia.",
-    "countLine": "{{n}} miembros",
-    "actions": {
-      "subtitle": "Editar miembro",
-      "roleTitle": "Rol",
-      "rename": "Renombrar",
-      "remove": "Eliminar"
-    },
-    "rename": {
-      "title": "Renombrar",
-      "placeholder": "Nuevo nombre"
-    },
-    "lastParent": {
-      "cantChangeRole": "No puedes cambiar el rol del último padre/madre. Añade primero otro padre/madre.",
-      "cantRemove": "No puedes eliminar al último padre/madre. Añade primero otro padre/madre.",
-      "notice": "Es el último padre/madre, así que no puedes cambiar su rol ni eliminarlo."
-    },
-    "remove": {
-      "title": "¿Eliminar miembro?",
-      "body": "Las tareas se mantienen, pero el miembro se elimina y se limpian las asignaciones."
-    },
-    "fallbackMember": "Miembro",
-    "changeOwnNameHint": "Cambia tu nombre en Ajustes → Familia.",
-    "memberFallback": "Miembro",
+    "changeOwnNameHint": "Cambia tu nombre en Ajustes → Perfil.",
     "editMember": "Editar miembro",
-    "roleTitle": "Rol",
-    "lastParentNotice": "Este es el último padre/madre, por lo que no puedes cambiar su rol ni eliminarlo.",
+    "hello": "Hola",
+    "lastParentCantChangeRole": "No puedes cambiar el rol del último padre/madre. Añade primero otro padre/madre.",
+    "lastParentCantRemove": "No puedes eliminar al último padre/madre. Añade primero otro padre/madre.",
+    "lastParentNotice": "Es el último padre/madre, por lo que no puedes cambiar su rol ni eliminarlo.",
+    "memberFallback": "Miembro",
+    "newNamePlaceholder": "Nuevo nombre",
+    "noFamilyBody": "Únete/crea una familia en Ajustes → Familia.",
+    "noFamilyTitle": "Aún no estás en una familia.",
+    "overview": "Aquí tienes un resumen de las actividades de tu familia.",
+    "removeBody": "Las tareas permanecen, pero el miembro se elimina y se borran todas las asignaciones para él/ella.",
     "removeTitle": "¿Eliminar miembro?",
-    "removeBody": "Las tareas se mantienen, pero el miembro se elimina y se limpian sus asignaciones.",
-    "count": "{{n}} miembros",
-    "newNamePlaceholder": "Nuevo nombre"
+    "roleTitle": "Rol",
+    "parent": "Padre/Madre",
+    "child": "Niño",
+    "editHintLongPress": "Consejo: mantén pulsado un miembro para editar."
   },
   "auth": {
-    "missingUid": "No has iniciado sesión (falta el ID del miembro).",
+    "tagline": "Tareas familiares, simplificadas",
+    "title": "Iniciar sesión",
+    "registerTitle": "Crear cuenta",
+    "email": "Correo",
+    "password": "Contraseña",
+    "confirmPassword": "Confirmar contraseña",
+    "togglePassword": "Mostrar u ocultar contraseña",
+    "placeholders": {
+      "email": "nombre@email.com",
+      "password": "••••••••",
+      "confirmPassword": "••••••••"
+    },
+    "passwordLoginBtn": "Entrar",
+    "registerBtn": "Crear cuenta",
+    "forgotPasswordBtn": "¿Olvidaste la contraseña?",
+    "sendMagicLinkBtn": "Enviar magic link",
+    "noAccount": "¿No tienes cuenta?",
+    "createAccount": "Crear una",
+    "haveAccount": "¿Ya tienes cuenta?",
+    "backToLogin": "Iniciar sesión",
+    "alerts": {
+      "missingEmailPasswordBody": "Introduce correo y contraseña.",
+      "missingEmailBody": "Introduce tu correo.",
+      "missingRegisterBody": "Introduce correo y ambas contraseñas.",
+      "weakPasswordBody": "La contraseña debe tener al menos 6 caracteres.",
+      "passwordMismatchBody": "Las contraseñas no coinciden.",
+      "loginErrorTitle": "Error de inicio de sesión",
+      "resetSentBody": "Te enviamos un correo con un enlace para establecer una nueva contraseña.",
+      "resetErrorTitle": "Error de restablecimiento",
+      "magicLinkSentBody": "Hemos enviado un magic link a tu correo.",
+      "magicLinkErrorTitle": "Error de magic link",
+      "registerConfirmEmailBody": "Cuenta creada. Confirma tu correo con el enlace enviado y luego inicia sesión.",
+      "registerOkBody": "Cuenta creada. Ya puedes iniciar sesión.",
+      "registerErrorTitle": "Error de registro"
+    },
+    "missingUid": "No has iniciado sesión (falta el ID de miembro).",
     "invalidEmail": "Introduce un correo válido.",
     "magicLinkSent": "Revisa tu correo para el enlace de inicio de sesión.",
     "magicLinkHelp": "Te enviaremos un enlace de inicio de sesión por correo.",
-    "loginMagicLink": "Iniciar sesión (enlace mágico)",
+    "loginMagicLink": "Inicio (magic link)",
     "sendLink": "Enviar enlace",
     "logout": "Cerrar sesión",
     "signedInAs": "Conectado como:"
-  },
-  "home": {
-    "anytimeTitle": "En cualquier momento",
-    "anytimeHint": "Sin fecha límite",
-    "badge": {
-      "attention": "ATEN"
-    },
-    "doneTitle": "Hecho",
-    "doneHint": "Completado recientemente",
-    "emptyTitle": "Sin tareas",
-    "emptySubtitle": "Añade tareas para empezar.",
-    "familyPrefix": "Familia",
-    "filterPrefix": "Filtro",
-    "reviewTitle": "Para aprobar",
-    "reviewHint": "Esperando tu decisión",
-    "reviewHintChild": "Esperando al padre",
-    "scope": {
-      "family": "Familia",
-      "kids": "Niños",
-      "me": "Yo"
-    },
-    "status": {
-      "open": "Abierto"
-    },
-    "subtitle": "Vista rápida",
-    "tabAll": "Todos",
-    "tabKids": "Niños",
-    "tabMe": "Yo",
-    "tagline": "Tareas familiares, fáciles",
-    "todayHint": "Enfoque",
-    "todayTitle": "Hoy",
-    "upcomingHint": "Próximos 7 días",
-    "upcomingTitle": "Próximas",
-    "stats": {
-      "active": "Activas",
-      "review": "Para aprobar",
-      "done": "Hechas"
-    },
-    "brandTitle": "FamiGo",
-    "scopeHint": {
-      "me": "Tareas para ti",
-      "kids": "Tareas para todos los niños",
-      "family": "Todas las tareas familiares"
-    },
-    "info": {
-      "scope": {
-        "title": "Vistas",
-        "body": "Elige qué tareas mostrar: Familia, Niños o Yo."
-      },
-      "review": {
-        "title": "En espera de aprobación",
-        "body": {
-          "parent": "Aprueba o rechaza las tareas marcadas como hechas.",
-          "child": "Cuando pides aprobación, un padre debe confirmarlo."
-        }
-      },
-      "actions": {
-        "title": "Botones",
-        "open": "Tomar — reclámala para ti.",
-        "claimed": "Solicitar aprobación — pide a un padre que apruebe.",
-        "review": {
-          "parent": "Aprobar / Rechazar — decide si está hecho.",
-          "child": "En espera — un padre aprobará o rechazará."
-        }
-      }
-    }
   },
   "shopping": {
     "addBtn": "Añadir",
@@ -2795,38 +3248,143 @@ const es = {
     "suggestedBy": "Sugerido por",
     "toBuy": "Para comprar",
     "title": "Compras",
+    "goShop": "Ir de compras",
+    "sendTitle": "Enviar lista",
+    "sendPick": "Elige quién va de compras.",
+    "sendEmpty": "La lista está vacía.",
+    "sendHeader": "¿Quién va de compras?",
+    "sendHint": "Envía toda la lista como una sola notificación (sin spam).",
+    "sentTitle": "Enviado",
+    "sentBody": "Se envió la notificación de la lista de compras.",
+    "addedAt": "Añadido",
+    "addedBy": "Añadido por",
+    "bought": "Comprado",
+    "bought7d": "Comprado (7 días)",
+    "boughtEmptyTitle": "Sin compras recientes",
+    "boughtEmptyBody": "Los artículos que marques como comprados aparecerán aquí durante 7 días.",
+    "boughtWhen": "Comprado",
     "chip": {
-      "detergent": "Detergente para ropa",
-      "toiletPaper": "Papel higiénico",
-      "water": "Agua",
-      "milk": "Leche",
       "bread": "Pan",
+      "cheese": "Queso",
+      "detergent": "Detergente para ropa",
+      "dishSoap": "Lavavajillas",
       "eggs": "Huevos",
       "fruit": "Fruta",
-      "vegetables": "Verduras",
       "meat": "Carne",
-      "cheese": "Queso",
+      "milk": "Leche",
       "shampoo": "Champú",
-      "dishSoap": "Lavavajillas"
+      "toiletPaper": "Papel higiénico",
+      "vegetables": "Verduras",
+      "water": "Agua"
+    }
+  },
+  "home": {
+    "title": "Tareas diarias",
+    "subtitle": "Vista rápida y enfoque",
+    "plannerToday": "Planificador — hoy",
+    "tasksLatest": "Tareas — más recientes",
+    "shopping": "Compras",
+    "shoppingCartCount": "Tienes {{count}} artículos en el carrito",
+    "viewMore": "Ver más",
+    "noFamilyShopping": "Únete o crea una familia para usar la lista de compras compartida.",
+    "noTime": "En cualquier momento",
+    "shoppingEmpty": "La lista de compras está vacía",
+    "plannerEmptyMe": "Nada planeado hoy",
+    "plannerEmptyKids": "Nada planeado para los niños",
+    "plannerEmptyFamily": "Nada planeado hoy",
+    "plannerEmptyFamilySub": "Planifica una cosita ✨",
+    "plannerEmptySub": "Todo despejado 🙂",
+    "tasksEmptyMe": "No tienes tareas",
+    "tasksEmptyKids": "Los niños no tienen tareas",
+    "tasksEmptyFamily": "No hay tareas abiertas",
+    "tasksEmptySub": "Todo limpio. Sigue así 😄",
+  },
+
+  "planner": {
+    "title": "Planificador",
+    "subtitle": "Tu plan diario sencillo (privado o compartido).",
+    "selectedDay": "Seleccionado",
+    "hintPickDay": "Elige un día en el calendario y luego pulsa + Nuevo",
+    "newBtn": "+ Nuevo",
+    "newTitle": "Nuevo plan",
+    "editTitle": "Editar plan",
+    "placeholder": {
+      "title": "p. ej. médico, pagar facturas, llamar a la abuela"
     },
-    "bought7days": "Comprado (7 días)",
-    "bought7d": "Comprado (7 días)",
-    "bought": "Comprado",
-    "boughtEmptyTitle": "Sin compras recientes",
-    "boughtEmptyBody": "Aquí se mostrarán los artículos comprados en los últimos 7 días.",
-    "addedBy": "Añadido por",
-    "addedAt": "Añadido",
-    "boughtWhen": "Comprado"
+    "timeLabel": "Hora (opcional)",
+    "timePlaceholder": "HHMM (p. ej. 1630)",
+    "anytime": "Cualquiera",
+    "for": "Para",
+    "shared": "Compartido",
+    "forWho": "¿Para quién?",
+    "family": "Familia",
+    "someone": "Alguien",
+    "assigned": {
+      "all": "Familia",
+      "some": "Seleccionado"
+    },
+    "someHint": "Consejo: selecciona uno o más miembros. (Pulsación larga para borrar)",
+    "noFamilyHint": "Consejo: únete a una familia para compartir un plan con un miembro.",
+    "noStorage": "Nota: AsyncStorage no está instalado, así que los planes se reiniciarán al recargar la app.",
+    "calendarMissing": "El componente de calendario no está instalado. Si quieres vista mensual, instala react-native-calendars.",
+    "emptyTitle": "Aún no hay planes",
+    "emptyBody": "Pulsa + Nuevo y añade tu primer plan para este día.",
+    "titleRequired": "El título es obligatorio.",
+    "timeInvalid": "La hora debe ser HH:MM (p. ej. 1630).",
+    "pickSomeone": "Elige al menos un miembro.",
+    "deleteConfirm": "¿Eliminar este elemento?"
   }
 };
 
 const rs = {
+  "home": {
+    "title": "Dnevne obaveze",
+    "subtitle": "Brz pregled i fokus",
+    "plannerToday": "Planer — danas",
+    "tasksLatest": "Zadaci — najnoviji",
+    "shopping": "Kupovina",
+    "shoppingCartCount": "Imaš {{count}} stavki u korpi",
+    "viewMore": "Vidi više",
+    "noFamilyShopping": "Pridruži se ili napravi porodicu da koristiš zajedničku listu kupovine.",
+    "noTime": "Bilo kada",
+    "shoppingEmpty": "Lista kupovine je prazna",
+    "plannerEmptyMe": "Danas nema planova",
+    "plannerEmptyKids": "Nema planova za decu",
+    "plannerEmptyFamily": "Danas nema planova",
+    "plannerEmptyFamilySub": "Isplaniraj jednu sitnicu ✨",
+    "plannerEmptySub": "Sve je mirno 🙂",
+    "tasksEmptyMe": "Nema zadataka za tebe",
+    "tasksEmptyKids": "Deca nemaju zadataka",
+    "tasksEmptyFamily": "Nema otvorenih zadataka",
+    "tasksEmptySub": "Sve je čisto. Tako i ostani 😄",
+  },
+
   "tabs": {
     "home": "Danas",
     "members": "Članovi",
     "tasks": "Zadaci",
-    "settings": "Podešavanja",
-    "shopping": "Kupovina"
+    "shopping": "Kupovina",
+    "settings": "Podešavanja"
+  },
+  "onboarding": {
+    "profile": {
+      "title": "Podesi svoj profil",
+      "subtitle": "Ovo pomaže porodici da prepozna ko je ko.",
+      "name": "Tvoje ime",
+      "role": "Ti si",
+      "gender": "Pol",
+      "male": "Muško",
+      "female": "Žensko",
+      "autoAvatar": "Avatar će se postaviti automatski"
+    },
+    "family": {
+      "title": "Pridruži se ili kreiraj porodicu",
+      "subtitle": "Možeš se pridružiti kodom ili kreirati novu porodicu.",
+      "joinTitle": "Pridruži se postojećoj porodici",
+      "joinSub": "Unesi porodični kod koji si dobio/la od roditelja.",
+      "createTitle": "Kreiraj novu porodicu",
+      "createSub": "Izaberi naziv porodice i kasnije pozovi ostale."
+    }
   },
   "common": {
     "loading": "Učitavam...",
@@ -2838,15 +3396,31 @@ const rs = {
     "copied": "Kopirano.",
     "copyFailed": "Ne mogu da kopiram.",
     "all": "Sve",
+    "on": "Uključeno",
+    "off": "Isključeno",
     "info": "Info",
     "me": "Ja",
-    "on": "UKLJ",
-    "off": "ISKLJ",
-    "success": "Uspeh"
+    "remove": "Ukloni",
+    "rename": "Preimenuj",
+    "success": "Uspeh",
+    "male": "Muško",
+    "female": "Žensko",
+    "back": "Nazad",
+    "continue": "Nastavi",
+    "create": "Kreiraj",
+    "join": "Pridruži se"
   },
   "settings": {
     "title": "Podešavanja",
     "subtitle": "Porodica, jezik i profil",
+    "setup": {
+      "title": "Podesi nalog",
+      "step1": "1) Uđi u porodicu ili napravi novu",
+      "step2": "2) Zatim postavi ime u Podešavanja → Porodica",
+      "whyName": "Tvoje ime se čuva kao član porodice i biće dostupno nakon što uđeš u porodicu.",
+      "next": "Sledeći korak",
+      "setNameNow": "Postavi svoje ime da bi te drugi mogli prepoznati."
+    },
     "language": "Jezik",
     "languageHint": "Izaberi jezik interfejsa.",
     "languageNote": "Ova promena važi za celu aplikaciju.",
@@ -2862,8 +3436,6 @@ const rs = {
       "notInFamily": "Nisi u porodici.",
       "statusLine": "Porodica: {{name}} (Poziv: {{code}})",
       "title": "Porodica",
-      "nextStepTitle": "Sledeći korak",
-      "nextStepBody": "Postavi svoje ime kako bi te drugi mogli prepoznati.",
       "notInFamilyTitle": "Još nema porodice"
     },
     "about": "O aplikaciji",
@@ -2876,14 +3448,13 @@ const rs = {
       "editName": "Uredi ime",
       "copy": "Kopiraj",
       "renameFamily": "Preimenuj",
-      "setYourName": "Postavi ime",
+      "setName": "Postavi ime",
       "leaveFamily": "Napusti porodicu",
       "deleteFamily": "Obriši porodicu",
       "showInviteCode": "Prikaži pozivni kod",
-      "setName": "Postavi ime",
       "hideInviteCode": "Sakrij pozivni kod",
       "createFamily": "Napravi porodicu",
-      "joinFamily": "Pridruži se porodici",
+      "joinFamily": "Uđi u porodicu",
       "join": "Pridruži se"
     },
     "msg": {
@@ -2898,12 +3469,17 @@ const rs = {
     "labels": {
       "family": "Porodica",
       "inviteCode": "Pozivni kod",
-      "yourName": "Tvoje ime",
       "myName": "Tvoje ime"
     },
     "notSet": "Nije postavljeno",
-    "onlyMemberDeleteHint": "Porodicu možeš obrisati samo ako si jedini član.",
-    "nameAfterJoin": "Pridruži se ili napravi porodicu da postaviš ime.",
+    "nameAfterJoin": "Uđi ili napravi porodicu da postaviš ime.",
+    "deleteFamily": {
+      "help": "Porodicu možeš obrisati samo ako si jedini član.",
+      "title": "Obriši porodicu",
+      "body": "Ovo će trajno obrisati porodicu i sve podatke.",
+      "confirm": "Upiši DELETE za potvrdu.",
+      "deleted": "Porodica je obrisana."
+    },
     "joinFamily": {
       "help": "Unesi pozivni kod od člana porodice.",
       "title": "Pridruži se porodici",
@@ -2912,33 +3488,19 @@ const rs = {
       "joined": "Sada si u porodici."
     },
     "createFamily": {
-      "title": "Napravi porodicu",
-      "desc": "Napravi novu porodicu i pozovi ostale.",
+      "title": "Kreiraj porodicu",
+      "desc": "Kreiraj novu porodicu i počni da deliš zadatke.",
       "placeholder": "Naziv porodice",
-      "nameRequired": "Unesi naziv porodice.",
+      "nameRequired": "Naziv porodice je obavezan.",
       "created": "Porodica je kreirana."
-    },
-    "deleteFamily": {
-      "title": "Obriši porodicu",
-      "body": "Ovo će obrisati porodicu i sve podatke. Ne može se poništiti.",
-      "confirm": "Obriši",
-      "deleted": "Porodica obrisana.",
-      "help": "Porodicu možeš obrisati samo ako si jedini član."
-    },
-    "setup": {
-      "title": "Podesi nalog",
-      "step1": "1) Pridruži se ili napravi porodicu",
-      "step2": "2) Zatim postavi ime u Podešavanja → Porodica",
-      "whyName": "Ime se čuva kao član porodice, pa je dostupno nakon pridruživanja.",
-      "next": "Sledeći korak",
-      "setNameNow": "Postavi svoje ime da bi te drugi prepoznali."
     },
     "leaveFamily": {
       "title": "Napusti porodicu",
       "body": "Da li si siguran/na da želiš da napustiš porodicu?",
       "confirm": "Napusti",
       "left": "Napustio/la si porodicu."
-    }
+    },
+    "myProfile": "Moj profil"
   },
   "tasks": {
     "status": {
@@ -2952,6 +3514,10 @@ const rs = {
       "active": "Aktivno",
       "review": "Za potvrdu",
       "done": "Gotovo"
+    },
+    "timelineHint": {
+      "assigned": "Dodeljeno → Gotovo → Odobreno",
+      "created": "Kreirano → Gotovo → Odobreno"
     },
     "hideDoneOn": "Sakrij gotovo: UKLJ",
     "hideDoneOff": "Sakrij gotovo: ISKLJ",
@@ -2998,13 +3564,30 @@ const rs = {
     "assign": {
       "none": "Nije dodeljeno",
       "select": "Izaberi",
+      "selectCta": "Izaberi",
       "clear": "Očisti izbor"
     },
     "title": "Zadaci",
     "heroSub": "Brzi filteri i pregled",
-    "new": "+ Novi",
+    "newBtn": "+ Novi",
+    "new": {
+      "title": "Kreiraj novi zadatak za člana porodice",
+      "placeholder": {
+        "title": "npr. Odvedi Luku na trening",
+        "time": "npr. 16:30"
+      },
+      "hint": {
+        "timeOptional": "Opcionalno: postavi vreme da uključiš podsetnike."
+      },
+      "repeatEveryDays": "Ponavljaj na svakih",
+      "assignTo": "Ko to radi?"
+    },
     "newPrompt": "Šta možeš danas da uradiš?",
     "when": "Kada?",
+    "reminder": {
+      "label": "Podsetnik",
+      "requiresTime": "Postavi vreme da uključiš podsetnike."
+    },
     "needsApproval": "Za potvrdu",
     "nextDue": "Sledeći rok",
     "action": {
@@ -3013,19 +3596,28 @@ const rs = {
       "requestDone": "Zahtevaj potvrdu",
       "approve": "Odobri",
       "reject": "Odbij",
-      "doneAuto": "Urađeno"
+      "doneAuto": "Urađeno",
+      "illDoIt": "Ja ću",
+      "leave": "Odustani",
+      "markDone": "Označi gotovo",
+      "notDone": "Nije gotovo",
+      "accept": "Prihvati",
+      "take": "Preuzmi"
     },
     "repeatEveryPlaceholder": "Ponavljaj na ___ dana (samo brojevi)",
+    "repeatDaysPlaceholder": "___",
     "dateInvalid": "Izaberi ispravan datum.",
     "timeInvalid": "Vreme mora biti HHMM (npr. 1630).",
     "calendarMissing": "Izbor kalendara nije instaliran. Unesi DDMM; kalendar je opcion.",
     "active": "Aktivno",
-    "done": "Urađeno",
+    "done": "Gotovo",
     "review": "Za potvrdu",
     "selectedDate": "Izabrani datum",
     "dateNotSet": "—",
-    "repeatFor": "Ponavljaj zadatak",
-    "repeatDaysPlaceholder": "___"
+    "badge": {
+      "open": "Otvoreno",
+      "done": "Završeno"
+    }
   },
   "today": {
     "title": "Danas",
@@ -3063,49 +3655,73 @@ const rs = {
     "stats": {
       "parents": "Roditelji",
       "kids": "Deca",
-      "todayDone": "Danas urađeno"
+      "todayDone": "Danas urađeno",
+      "done": "Gotovo",
+      "family": "Svi porodični zadaci"
     },
     "defaultParent": "Roditelj",
     "defaultChild": "Dete",
     "role": {
       "parent": "Roditelj",
-      "child": "Dete"
+      "child": "Dete",
+      "mom": "Mama",
+      "dad": "Tata"
     },
     "doneToday": "Danas urađeno",
-    "noFamilyTitle": "Još nisi u porodici.",
-    "noFamilyBody": "Pridruži se/napravi porodicu u Postavke → Porodica.",
-    "countLine": "{{n}} članova",
-    "actions": {
-      "subtitle": "Uredi člana",
-      "roleTitle": "Uloga",
-      "rename": "Preimenuj",
-      "remove": "Obriši"
-    },
-    "rename": {
-      "title": "Preimenuj",
-      "placeholder": "Novo ime"
-    },
-    "lastParent": {
-      "cantChangeRole": "Ne možeš promeniti ulogu zadnjeg roditelja. Dodaj još jednog roditelja pa pokušaj opet.",
-      "cantRemove": "Ne možeš obrisati zadnjeg roditelja. Dodaj još jednog roditelja pa pokušaj opet.",
-      "notice": "Ovo je zadnji roditelj pa mu ne možeš promeniti ulogu niti ga obrisati."
-    },
-    "remove": {
-      "title": "Obrisati člana?",
-      "body": "Zadaci ostaju, ali se uklanja član i sve dodele tom članu."
-    },
-    "fallbackMember": "Član",
-    "changeOwnNameHint": "Svoje ime menjaš u Podešavanja → Porodica.",
-    "memberFallback": "Član",
+    "changeOwnNameHint": "Promeni svoje ime u Podešavanja → Profil.",
     "editMember": "Uredi člana",
+    "hello": "Zdravo",
+    "lastParentCantChangeRole": "Ne možeš promeniti ulogu poslednjeg roditelja. Prvo dodaj još jednog roditelja.",
+    "lastParentCantRemove": "Ne možeš ukloniti poslednjeg roditelja. Prvo dodaj još jednog roditelja.",
+    "lastParentNotice": "Ovo je poslednji roditelj, zato mu ne možeš promeniti ulogu niti ga ukloniti.",
+    "memberFallback": "Član",
+    "newNamePlaceholder": "Novo ime",
+    "noFamilyBody": "Pridruži se/kreiraj porodicu u Podešavanja → Porodica.",
+    "noFamilyTitle": "Još nisi u porodici.",
+    "overview": "Evo pregleda porodičnih aktivnosti.",
+    "removeBody": "Zadaci ostaju, ali član se uklanja i sve dodele njemu se brišu.",
+    "removeTitle": "Ukloniti člana?",
     "roleTitle": "Uloga",
-    "lastParentNotice": "Ovo je zadnji roditelj pa mu ne možeš promeniti ulogu niti ga obrisati.",
-    "removeTitle": "Obrisati člana?",
-    "removeBody": "Zadaci ostaju, ali se uklanja član i sve dodele tom članu.",
-    "count": "{{n}} članova",
-    "newNamePlaceholder": "Novo ime"
+    "parent": "Roditelj",
+    "child": "Dijete",
+    "editHintLongPress": "Savjet: Drži pritisnuto člana za uređivanje."
   },
   "auth": {
+    "tagline": "Porodični zadaci, jednostavno",
+    "title": "Prijava",
+    "registerTitle": "Napravi nalog",
+    "email": "Email",
+    "password": "Lozinka",
+    "confirmPassword": "Potvrdi lozinku",
+    "togglePassword": "Prikaži ili sakrij lozinku",
+    "placeholders": {
+      "email": "ime@email.com",
+      "password": "••••••••",
+      "confirmPassword": "••••••••"
+    },
+    "passwordLoginBtn": "Prijavi se",
+    "registerBtn": "Napravi nalog",
+    "forgotPasswordBtn": "Zaboravljena lozinka?",
+    "sendMagicLinkBtn": "Pošalji magic link",
+    "noAccount": "Nemaš nalog?",
+    "createAccount": "Napravi ga",
+    "haveAccount": "Već imaš nalog?",
+    "backToLogin": "Prijava",
+    "alerts": {
+      "missingEmailPasswordBody": "Unesi email i lozinku.",
+      "missingEmailBody": "Unesi svoj email.",
+      "missingRegisterBody": "Unesi email i oba polja lozinke.",
+      "weakPasswordBody": "Lozinka mora imati najmanje 6 karaktera.",
+      "passwordMismatchBody": "Lozinke se ne poklapaju.",
+      "loginErrorTitle": "Greška pri prijavi",
+      "resetSentBody": "Poslali smo ti email sa linkom za novu lozinku.",
+      "resetErrorTitle": "Greška pri resetovanju",
+      "magicLinkSentBody": "Poslali smo magic link na tvoj email.",
+      "magicLinkErrorTitle": "Greška magic linka",
+      "registerConfirmEmailBody": "Nalog je napravljen. Potvrdi email preko linka, pa se prijavi.",
+      "registerOkBody": "Nalog je napravljen. Sada se možeš prijaviti.",
+      "registerErrorTitle": "Greška pri registraciji"
+    },
     "missingUid": "Nisi prijavljen (nedostaje ID člana).",
     "invalidEmail": "Unesi ispravan email.",
     "magicLinkSent": "Proveri email za link za prijavu.",
@@ -3114,72 +3730,6 @@ const rs = {
     "sendLink": "Pošalji link",
     "logout": "Odjava",
     "signedInAs": "Prijavljen kao:"
-  },
-  "home": {
-    "anytimeTitle": "Bilo kada",
-    "anytimeHint": "Bez roka",
-    "badge": {
-      "attention": "PAŽNJA"
-    },
-    "doneTitle": "Urađeno",
-    "doneHint": "Nedavno završeno",
-    "emptyTitle": "Nema zadataka",
-    "emptySubtitle": "Dodaj zadatke da kreneš.",
-    "familyPrefix": "Porodica",
-    "filterPrefix": "Filter",
-    "reviewTitle": "Za potvrdu",
-    "reviewHint": "Čeka tvoju odluku",
-    "reviewHintChild": "Čeka roditelja",
-    "scope": {
-      "family": "Porodica",
-      "kids": "Deca",
-      "me": "Ja"
-    },
-    "status": {
-      "open": "Otvoreno"
-    },
-    "subtitle": "Brzi pregled",
-    "tabAll": "Sve",
-    "tabKids": "Deca",
-    "tabMe": "Ja",
-    "tagline": "Porodični zadaci, jednostavno",
-    "todayHint": "Fokus",
-    "todayTitle": "Danas",
-    "upcomingHint": "Sledećih 7 dana",
-    "upcomingTitle": "Nadolazeće",
-    "stats": {
-      "active": "Aktivno",
-      "review": "Za potvrdu",
-      "done": "Urađeno"
-    },
-    "brandTitle": "FamiGo",
-    "scopeHint": {
-      "me": "Zadaci za tebe",
-      "kids": "Zadaci za svu decu",
-      "family": "Svi porodični zadaci"
-    },
-    "info": {
-      "scope": {
-        "title": "Prikazi",
-        "body": "Izaberi čije zadatke prikazati: Porodica, Deca ili Ja."
-      },
-      "review": {
-        "title": "Čeka odobrenje",
-        "body": {
-          "parent": "Odobri ili odbij zadatke označene kao urađene.",
-          "child": "Kad zatražiš potvrdu, roditelj treba da odobri."
-        }
-      },
-      "actions": {
-        "title": "Dugmad",
-        "open": "Preuzmi — uzmi zadatak za sebe.",
-        "claimed": "Traži potvrdu — zatraži od roditelja da odobri.",
-        "review": {
-          "parent": "Odobri / Odbij — odluči da li je gotovo.",
-          "child": "Čekanje — roditelj će odobriti ili odbiti."
-        }
-      }
-    }
   },
   "shopping": {
     "addBtn": "Dodaj",
@@ -3197,28 +3747,128 @@ const rs = {
     "suggestedBy": "Predložio",
     "toBuy": "Za kupiti",
     "title": "Kupovina",
+    "goShop": "Idi u kupovinu",
+    "sendTitle": "Pošalji listu",
+    "sendPick": "Izaberi ko ide u kupovinu.",
+    "sendEmpty": "Lista je prazna.",
+    "sendHeader": "Ko ide u kupovinu?",
+    "sendHint": "Pošalji celu listu kao jednu notifikaciju (bez spama).",
+    "sentTitle": "Poslato",
+    "sentBody": "Notifikacija sa listom za kupovinu je poslata.",
+    "addedAt": "Dodato",
+    "addedBy": "Dodao",
+    "bought": "Kupljeno",
+    "bought7d": "Kupljeno (7 dana)",
+    "boughtEmptyTitle": "Nema skorijih kupovina",
+    "boughtEmptyBody": "Stavke koje označiš kao kupljene biće ovde prikazane 7 dana.",
+    "boughtWhen": "Kupljeno",
     "chip": {
-      "detergent": "Deterdžent za veš",
-      "toiletPaper": "Toalet papir",
-      "water": "Voda",
-      "milk": "Mleko",
       "bread": "Hleb",
+      "cheese": "Sir",
+      "detergent": "Deterdžent za veš",
+      "dishSoap": "Deterdžent za sudove",
       "eggs": "Jaja",
       "fruit": "Voće",
-      "vegetables": "Povrće",
       "meat": "Meso",
-      "cheese": "Sir",
+      "milk": "Mleko",
       "shampoo": "Šampon",
-      "dishSoap": "Deterdžent za suđe"
+      "toiletPaper": "Toalet papir",
+      "vegetables": "Povrće",
+      "water": "Voda"
+    }
+  },
+  "home": {
+    "anytimeHint": "Bez roka",
+    "scope": {
+      "family": "Porodica",
+      "kids": "Deca"
     },
-    "bought7days": "Kupljeno (7 dana)",
-    "bought7d": "Kupljeno (7 dana)",
-    "bought": "Kupljeno",
-    "boughtEmptyTitle": "Nema skorašnjih kupovina",
-    "boughtEmptyBody": "Stavke kupljene u poslednjih 7 dana prikazaće se ovde.",
-    "addedBy": "Dodao/la",
-    "addedAt": "Dodano",
-    "boughtWhen": "Kupljeno"
+    "stats": {
+      "active": "Aktivno",
+      "review": "Za odobrenje",
+      "done": "Završeno"
+    },
+    "doneHint": "Nedavno završeno",
+    "emptyTitle": "Nema zadataka",
+    "reviewTitle": "Za odobrenje",
+    "todayHint": "Fokus",
+    "anytimeTitle": "Bilo kada",
+    "filterPrefix": "Filter",
+    "emptySubtitle": "Dodaj zadatke da počneš.",
+    "doneTitle": "Završeno",
+    "familyPrefix": "Porodica",
+    "reviewHint": "Čeka tvoju odluku",
+    "badge": {
+      "attention": "PAŽ"
+    },
+    "reviewHintChild": "Čeka roditelja",
+    "todayTitle": "Danas",
+    "tagline": "Porodični zadaci, jednostavno",
+    "upcomingHint": "Sledećih 7 dana",
+    "upcomingTitle": "Nadolazeće",
+    "subtitle": "Brzi pregled",
+    "info": {
+      "scope": {
+        "title": "Opseg",
+        "body": "Izaberi na koje zadatke želiš da se fokusiraš. Porodica prikazuje sve zadatke, a Deca samo dečje zadatke."
+      },
+      "review": {
+        "title": "Potvrda",
+        "body": {
+          "parent": "Roditelj: potvrdi da je zadatak završen.",
+          "child": "Dete: pošalji zadatak nazad na listu za izmene."
+        }
+      },
+      "actions": {
+        "title": "Akcije zadatka",
+        "open": "Otvoren: zadatak je dostupan za preuzimanje.",
+        "claimed": "Preuzet: neko radi na zadatku.",
+        "review": {
+          "parent": "Za odobrenje: roditelj treba da odobri ili odbije.",
+          "child": "Za odobrenje: čeka roditelja."
+        }
+      }
+    },
+    "brandTitle": "FamiGo",
+    "scopeHint": {
+      "me": "Zadaci za tebe",
+      "kids": "Zadaci za svu decu",
+      "family": "Svi porodični zadaci"
+    }
+  }
+  "planner": {
+    "title": "Planer",
+    "subtitle": "Tvoj jednostavan dnevni plan (privatno ili deljeno).",
+    "selectedDay": "Izabrano",
+    "hintPickDay": "Izaberi dan na kalendaru, zatim tapni + Novo",
+    "newBtn": "+ Novo",
+    "newTitle": "Novi plan",
+    "editTitle": "Uredi plan",
+    "placeholder": {
+      "title": "npr. doktor, platiti račune, pozvati baku"
+    },
+    "timeLabel": "Vreme (opciono)",
+    "timePlaceholder": "HHMM (npr. 1630)",
+    "anytime": "Bilo kad",
+    "for": "Za",
+    "shared": "Deljeno",
+    "forWho": "Za koga?",
+    "family": "Porodica",
+    "someone": "Neko",
+    "assigned": {
+      "all": "Porodica",
+      "some": "Izabrano"
+    },
+    "someHint": "Savet: izaberi jednog ili više članova. (Dug pritisak briše)",
+    "noFamilyHint": "Savet: pridruži se porodici da deliš plan sa članom.",
+    "noStorage": "Napomena: AsyncStorage nije instaliran, pa će se planovi resetovati kada se aplikacija ponovo učita.",
+    "calendarMissing": "Komponenta kalendara nije instalirana. Ako želiš mesečni prikaz, instaliraj react-native-calendars.",
+    "emptyTitle": "Još nema planova",
+    "emptyBody": "Tapni + Novo i dodaj prvi plan za ovaj dan.",
+    "titleRequired": "Naslov je obavezan.",
+    "timeInvalid": "Vreme mora biti HH:MM (npr. 1630).",
+    "pickSomeone": "Izaberi bar jednog člana.",
+    "deleteConfirm": "Obrisati ovu stavku?"
   }
 };
 

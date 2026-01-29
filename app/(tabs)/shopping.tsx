@@ -20,6 +20,7 @@ import { Screen } from "../../src/ui/components/Screen";
 import { Card } from "../../src/ui/components/Card";
 import { EmptyState } from "../../src/ui/components/EmptyState";
 import { theme } from "../../src/ui/theme";
+import { FONT, LETTER_SPACING } from "../../lib/typography";
 
 import { useT } from "../../lib/useT";
 import { useMembers } from "../../lib/members";
@@ -107,6 +108,11 @@ function formatShortDateTime(ms: number, locale: string) {
     return new Date(ms).toLocaleString();
   }
 }
+
+const TYPO = {
+  title: { fontFamily: FONT.title, letterSpacing: LETTER_SPACING.title as any },
+  body: { fontFamily: FONT.body, letterSpacing: LETTER_SPACING.body as any },
+};
 
 export default function ShoppingScreen() {
   const { locale } = useLocale();
@@ -293,8 +299,8 @@ export default function ShoppingScreen() {
           </Pressable>
 
           <View style={{ flex: 1 }}>
-            <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 15 }}>{(item as any).title}</Text>
-            <Text style={{ color: theme.colors.muted, marginTop: 2, fontSize: 12 }}>
+            <Text style={[{ color: theme.colors.text, fontWeight: "900", fontSize: 15 }, TYPO.title]}>{(item as any).title}</Text>
+            <Text style={[{ color: theme.colors.muted, marginTop: 2, fontSize: 12 }, TYPO.body]}>
               {tr("shopping.addedBy", "Added by")}: {addedBy}
               {addedAt ? `  ·  ${tr("shopping.addedAt", "Added")}: ${addedAt}` : ""}
             </Text>
@@ -346,8 +352,8 @@ export default function ShoppingScreen() {
           </View>
 
           <View style={{ flex: 1 }}>
-            <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 15 }}>{(item as any).title}</Text>
-            <Text style={{ color: theme.colors.muted, marginTop: 2, fontSize: 12 }}>
+            <Text style={[{ color: theme.colors.text, fontWeight: "900", fontSize: 15 }, TYPO.title]}>{(item as any).title}</Text>
+            <Text style={[{ color: theme.colors.muted, marginTop: 2, fontSize: 12 }, TYPO.body]}>
               {when ? `${tr("shopping.boughtWhen", "Bought")}: ${when}` : tr("shopping.bought", "Bought")}
             </Text>
           </View>
@@ -379,8 +385,8 @@ export default function ShoppingScreen() {
               <View style={styles.heroCardClip}>
                 <View style={styles.heroRow}>
                   <View style={styles.heroLeft}>
-                    <Text style={styles.heroTitle}>{tr("shopping.title", "Shopping")}</Text>
-                    <Text style={styles.heroSub}>{tr("shopping.subtitle", "Shared list for the whole family.")}</Text>
+                    <Text style={[styles.heroTitle, TYPO.title]}>{tr("shopping.title", "Shopping")}</Text>
+                    <Text style={[styles.heroSub, TYPO.body]}>{tr("shopping.subtitle", "Shared list for the whole family.")}</Text>
                   </View>
                 </View>
 
@@ -403,13 +409,13 @@ export default function ShoppingScreen() {
               onChangeText={setCustom}
               placeholder={tr("shopping.addPlaceholder", "Add an item...")}
               placeholderTextColor={theme.colors.muted}
-              style={styles.input}
+              style={[styles.input, TYPO.body]}
               returnKeyType="done"
               onSubmitEditing={() => onAdd(custom)}
             />
 
             <Pressable onPress={() => onAdd(custom)} style={({ pressed }) => [styles.addBtn, pressed && { opacity: 0.85 }]}>
-              <Text style={styles.addBtnText}>{tr("shopping.addBtn", "Add")}</Text>
+              <Text style={[styles.addBtnText, TYPO.body]}>{tr("shopping.addBtn", "Add")}</Text>
             </Pressable>
           </View>
         </Card>
@@ -424,7 +430,7 @@ export default function ShoppingScreen() {
               onPress={() => setSendOpen(true)}
               style={({ pressed }) => [styles.sendSelect, pressed && { opacity: 0.92 }]}
             >
-              <Text style={styles.sendSelectText} numberOfLines={1}>
+              <Text style={[styles.sendSelectText, TYPO.body]} numberOfLines={1}>
                 {sendToName ? String(sendToName) : tr("shopping.sendHeader", "Who is going shopping?")}
               </Text>
               <Ionicons name="chevron-down" size={16} color={theme.colors.muted} />
@@ -442,12 +448,12 @@ export default function ShoppingScreen() {
               {sending ? (
                 <ActivityIndicator />
               ) : (
-                <Text style={styles.sendGoText}>{tr("shopping.goShop", "Go shop")}</Text>
+                <Text style={[styles.sendGoText, TYPO.body]}>{tr("shopping.goShop", "Go shop")}</Text>
               )}
             </Pressable>
           </View>
 
-          <Text style={styles.sendHint} numberOfLines={1}>
+          <Text style={[styles.sendHint, TYPO.body]} numberOfLines={1}>
             {tr("shopping.sendHint", "Send the whole list as one notification (no spam).")}
           </Text>
         </View>
@@ -468,7 +474,7 @@ export default function ShoppingScreen() {
             }}
           >
             <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
-              <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 14 }}>
+              <Text style={[{ color: theme.colors.text, fontWeight: "900", fontSize: 14 }, TYPO.title]}>
                 {tr("shopping.sendHeader", "Who is going shopping?")}
               </Text>
               <Pressable onPress={() => setSendOpen(false)} hitSlop={12} style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1, padding: 4 })}>
@@ -503,7 +509,7 @@ export default function ShoppingScreen() {
                       marginBottom: 8,
                     })}
                   >
-                    <Text style={{ color: theme.colors.text, fontWeight: "800" }} numberOfLines={1}>
+                    <Text style={[{ color: theme.colors.text, fontWeight: "800" }, TYPO.body]} numberOfLines={1}>
                       {name || tr("shopping.member", "Member")}
                     </Text>
                     {active ? <Ionicons name="checkmark-circle" size={22} color={theme.colors.primary} /> : null}

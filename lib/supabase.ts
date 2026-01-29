@@ -9,12 +9,12 @@ const supabaseAnonKey = "sb_publishable_IGr0dApmovY_M0pBvBWcYQ_040ecJci";
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
-    // Use implicit flow so email links work in browser without PKCE verifier
+    // Keep implicit flow for widest compatibility (some links may still deliver hash tokens).
+    // We manually handle deep links in /app/auth-callback.tsx.
     flowType: "implicit",
     storage: AsyncStorage,
     persistSession: true,
     autoRefreshToken: true,
-    // We handle deep links ourselves in app/(auth)/auth-callback.tsx
     detectSessionInUrl: false,
   },
 });

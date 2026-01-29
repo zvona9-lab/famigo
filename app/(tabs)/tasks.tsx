@@ -3,6 +3,7 @@ import React, { useMemo, useState, useEffect } from "react";
 import {
   Alert,
   FlatList,
+  RefreshControl,
   Keyboard,
   KeyboardAvoidingView,
   Modal,
@@ -24,6 +25,8 @@ import { Button } from "../../src/ui/components/Button";
 import { EmptyState } from "../../src/ui/components/EmptyState";
 import { theme } from "../../src/ui/theme";
 
+import { FONT, LETTER_SPACING } from "../../lib/typography";
+
 import { useT } from "../../lib/useT";
 import { useTasks, Task } from "../../lib/tasks";
 import { useMembers } from "../../lib/members";
@@ -39,6 +42,11 @@ try {
 } catch {
   DateTimePicker = null;
 }
+
+const TYPO = {
+  title: { fontFamily: FONT.title, letterSpacing: LETTER_SPACING.title },
+  body: { fontFamily: FONT.body, letterSpacing: LETTER_SPACING.body },
+};
 
 // Optional gradient (if installed)
 let LinearGradient: any = null;
@@ -67,6 +75,24 @@ function addDays(ts: number, days: number) {
   d.setDate(d.getDate() + days);
   return d.getTime();
 }
+
+const DONE_HIDE_AFTER_MS = 7 * 24 * 60 * 60 * 1000;
+
+function isTaskVisibleByDoneRetention(task: any, nowTs: number): boolean {
+  if (String(task?.status ?? "") !== "done") return true;
+  const doneTsRaw = task?.completedAt ?? task?.completed_at ?? task?.doneAt ?? task?.done_at ?? task?.updatedAt ?? task?.updated_at ?? null;
+  let doneTs = Number(doneTsRaw);
+  if (!Number.isFinite(doneTs) || doneTs <= 0) {
+    if (typeof doneTsRaw === "string") {
+      const parsed = Date.parse(doneTsRaw);
+      if (Number.isFinite(parsed) && parsed > 0) doneTs = parsed;
+    }
+  }
+  if (!Number.isFinite(doneTs) || doneTs <= 0) return true; // safety: keep if we can't determine time
+  return nowTs - doneTs <= DONE_HIDE_AFTER_MS;
+}
+
+
 function ddmmFromTs(ts: number) {
   const d = new Date(ts);
   return `${pad2(d.getDate())}${pad2(d.getMonth() + 1)}`;
@@ -195,10 +221,10 @@ function MenuPill(props: { big: string; small: string; active?: boolean; onPress
         pressed ? { opacity: 0.92, transform: [{ scale: 0.99 }] } : null,
       ]}
     >
-      <Text style={[styles.menuBig, isActive ? { color: theme.colors.primary } : null]} numberOfLines={1}>
+      <Text style={[styles.menuBig, TYPO.body, isActive ? { color: theme.colors.primary } : null]} numberOfLines={1}>
         {props.big}
       </Text>
-      <Text style={[styles.menuSmall, isActive ? { color: theme.colors.primary } : null]} numberOfLines={1}>
+      <Text style={[styles.menuSmall, TYPO.body, isActive ? { color: theme.colors.primary } : null]} numberOfLines={1}>
         {props.small}
       </Text>
     </Pressable>
@@ -213,6 +239,9 @@ export default function TasksScreen() {
     if (typeof v === "string" && v.startsWith("[missing")) return fallback;
     return v as string;
   }
+  // UI toggle: hide repeat interval controls for now (feature still works in data model)
+  const SHOW_REPEAT_UI = false;
+
 
   const {
     tasks,
@@ -222,15 +251,15 @@ export default function TasksScreen() {
     updateTask,
     deleteTask,
     setAssignee,
-    acceptTask,
     rejectTask,
+    requestDone,
     completeAuto,
   } = useTasks() as any;
 
   const { ready: membersReady, myId, me, isParent, members } = useMembers() as any;
   const myName = String(me?.name ?? tr("common.me", "Me"));
 
-  const [filter, setFilter] = useState<"all" | "active" | "done">("all");
+  const [filter, setFilter] = useState<"all" | "active" | "done">("active");
   const [nowTs, setNowTs] = useState(() => Date.now());
   useEffect(() => {
     const id = setInterval(() => setNowTs(Date.now()), 60_000);
@@ -281,21 +310,31 @@ export default function TasksScreen() {
   // ✅ prevent double taps on action buttons
   const [actionBusyId, setActionBusyId] = useState<string | null>(null);
 
+  const [refreshing, setRefreshing] = useState(false);
+
   const filtered = useMemo(() => {
     const list: Task[] = Array.isArray(tasks) ? tasks : [];
-    let out = list;
-    if (filter === "active") out = out.filter((x) => x.status !== "done");
-        if (filter === "done") out = out.filter((x) => x.status === "done");
-    return out;
-  }, [tasks, filter]);
+    const listPruned = list.filter((x) => isTaskVisibleByDoneRetention(x, nowTs));
 
-  const menuCounts = useMemo(() => {
+    let out = listPruned;
+
+    if (filter === "active") out = out.filter((x) => x.status !== "done");
+    if (filter === "done") out = out.filter((x) => x.status === "done");
+
+    return out;
+  }, [tasks, filter, nowTs]);
+
+const menuCounts = useMemo(() => {
     const list: Task[] = Array.isArray(tasks) ? tasks : [];
-    const all = list.length;
-    const done = list.filter((x) => x.status === "done").length;
-    const active = list.filter((x) => x.status !== "done").length;
+    const listPruned = list.filter((x) => isTaskVisibleByDoneRetention(x, nowTs));
+
+    const all = listPruned.length;
+    const done = listPruned.filter((x) => x.status === "done").length;
+    const active = listPruned.filter((x) => x.status !== "done").length;
+
     return { all, active, done };
-  }, [tasks]);
+  }, [tasks, nowTs]);
+
 
   function openNew() {
     setSelected(null);
@@ -483,6 +522,16 @@ export default function TasksScreen() {
     }
   }
 
+  async function onPullRefresh() {
+    if (refreshing) return;
+    setRefreshing(true);
+    try {
+      await refresh?.();
+    } finally {
+      setRefreshing(false);
+    }
+  }
+
   function getStatusBarStyle(status: string, isLate: boolean) {
     // Late overrides (unless done)
     if (isLate && status !== "done") return { backgroundColor: theme.colors.danger };
@@ -539,7 +588,7 @@ export default function TasksScreen() {
     const isAuto = !!rr.days && rr.autoComplete === true;
     const canAutoDone = isAuto && status !== "done";
 
-    const canAcceptReject = status === "open" && isAssignee;
+    const canMarkDoneReject = status === "open" && isAssignee;
     const busy = actionBusyId === item.id;
     const canTake = status === "open" && isUnassigned && !!myId;
 
@@ -557,13 +606,13 @@ export default function TasksScreen() {
             <View style={styles.taskContent}>
               <View style={styles.taskHeader}>
                 <View style={{ flex: 1 }}>
-                  <Text style={styles.taskTitle} numberOfLines={2}>
+                  <Text style={[styles.taskTitle, TYPO.body]} numberOfLines={2}>
                     {String(item.title ?? "")}
                   </Text>
 
                   <View style={{ height: 6 }} />
 
-                  <Text style={styles.taskMeta} numberOfLines={1}>
+                  <Text style={[styles.taskMeta, TYPO.body]} numberOfLines={1}>
                     {dueAt
                       ? isAuto
                         ? `${tr("tasks.nextDue", "Next due")}: ${dueText}`
@@ -574,7 +623,7 @@ export default function TasksScreen() {
                   {item.assignedToName ? (
                     <>
                       <View style={{ height: 4 }} />
-                      <Text style={styles.taskMeta} numberOfLines={1}>
+                      <Text style={[styles.taskMeta, TYPO.body]} numberOfLines={1}>
                         {`${tr("tasks.assignedTo", "Assigned to")}: ${String(item.assignedToName)}`}
                       </Text>
                     </>
@@ -582,13 +631,13 @@ export default function TasksScreen() {
                 </View>
 
                 <View style={styles.statusPill}>
-                  <Text style={styles.statusPillText}>
+                  <Text style={[styles.statusPillText, TYPO.body]}>
                     {status === "done" ? tr("tasks.badge.done", "Done") : tr("tasks.badge.open", "Open")}
                   </Text>
                 </View>
               </View>
 
-              {(canAutoDone || canTake || canAcceptReject) ? (
+              {(canAutoDone || canTake || canMarkDoneReject) ? (
                 <View style={styles.actionsRow}>
                   {canAutoDone ? (
                     <Button
@@ -603,13 +652,18 @@ export default function TasksScreen() {
                     />
                   ) : null}
 
-                  {canAcceptReject ? (
+                  {canMarkDoneReject ? (
                     <>
                       <Button
-                        title={tr("tasks.action.accept", "Accept")}
+                        title={tr("tasks.action.markDone", "Mark done")}
                         onPress={() => {
+                          if (!myId) {
+                            Alert.alert(tr("common.error", "Error"), tr("auth.missingUid", "You are not signed in (member id missing)."));
+                            return;
+                          }
                           runAction(item, async () => {
-                            await acceptTask?.(item.id);
+                            // Mark done for the currently assigned user (same as Home tab)
+                            await (requestDone as any)?.(item.id, myId, myName);
                           });
                         }}
                         style={styles.actionBtn}
@@ -659,7 +713,11 @@ export default function TasksScreen() {
   return (
     <Screen noPadding>
       <View style={{ flex: 1, width: "100%", alignSelf: "stretch" }}>
-        <ScrollView contentContainerStyle={{ paddingBottom: 24 }} showsVerticalScrollIndicator={false}>
+        <ScrollView
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onPullRefresh} />}
+          contentContainerStyle={{ paddingBottom: 24 }}
+          showsVerticalScrollIndicator={false}
+        >
           <View style={{ padding: 16 }}>
             {/* Header card (Title + subtitle + +New) */}
             <View style={styles.headerOuter}>
@@ -678,8 +736,8 @@ export default function TasksScreen() {
 
                 <View style={styles.heroTopRow}>
                   <View style={styles.heroLeft}>
-                    <Text style={styles.heroTitle}>{tr("tasks.title", "Tasks")}</Text>
-                    <Text style={styles.heroSub}>{tr("tasks.heroSub", "Quick filters and overview")}</Text>
+                    <Text style={[styles.heroTitle, TYPO.title]}>{tr("tasks.title", "Tasks")}</Text>
+                    <Text style={[styles.heroSub, TYPO.body]}>{tr("tasks.heroSub", "Quick filters and overview")}</Text>
 
                     <View style={{ height: 10 }} />
                   </View>
@@ -752,7 +810,7 @@ export default function TasksScreen() {
 
         <BottomSheet visible={sheetOpen} onClose={() => setSheetOpen(false)}>
           <Card>
-            <Text style={{ fontSize: 16, fontWeight: "900", color: PALETTE.text }}>
+            <Text style={[{ fontSize: 16, fontWeight: "900", color: theme.colors.text }, TYPO.title]}>
               {tr("tasks.actionsTitle", "Task actions")}
             </Text>
 
@@ -786,12 +844,12 @@ export default function TasksScreen() {
           }}
         >
           <Card>
-            <Text style={{ fontSize: 18, fontWeight: "900", color: PALETTE.text }}>
+            <Text style={[{ fontSize: 18, fontWeight: "900", color: theme.colors.text }, TYPO.title]}>
               {selected ? tr("tasks.editTitle", "Edit task") : ""}
             </Text>
             <ScrollView style={{ maxHeight: 620 }} contentContainerStyle={{ paddingBottom: 36 }} keyboardShouldPersistTaps="always">
               {!selected ? (
-                <Text style={{ marginTop: 2, fontSize: 13, fontWeight: "800", color: PALETTE.muted }}>
+                <Text style={[{ marginTop: 2, fontSize: 13, fontWeight: "800", color: theme.colors.muted }, TYPO.body]}>
                   {tr("tasks.new.title", "Create a new task for a family member")}
                 </Text>
               ) : null}
@@ -806,7 +864,7 @@ export default function TasksScreen() {
               />
 
               <View style={{ marginTop: 12 }}>
-                <Text style={{ fontSize: 13, fontWeight: "800", color: PALETTE.muted }}>{tr("tasks.when", "When?")}</Text>
+                <Text style={[{ fontSize: 13, fontWeight: "800", color: theme.colors.muted }, TYPO.body]}>{tr("tasks.when", "When?")}</Text>
               </View>
 
               <View style={styles.dateButtonsRow}>
@@ -851,36 +909,38 @@ export default function TasksScreen() {
                 />
               </View>
 
-              <TextInput
-                value={formatDisplayDateFromDDMM(draftDateDDMM)}
-                onChangeText={(v) => {
-                  const digits = String(v || "").replace(/[^0-9]/g, "").slice(0, 4);
-                  setDraftDateDDMM(digits);
-                  if (digits.length) {
-                    setDraftDateMode("custom");
-                    setDraftCalendarTs(null);
-                  }
-                }}
-                placeholder={tr("tasks.datePlaceholder", "DDMM")}
-                placeholderTextColor={theme.colors.muted}
-                autoCapitalize="none"
-                keyboardType="number-pad"
-                maxLength={10}
-                style={[styles.input, { fontSize: 14, fontWeight: "800", paddingVertical: 10, marginTop: 10 }]}
-              />
+              <View style={styles.dateTimeRow}>
+                <TextInput
+                  value={formatDisplayDateFromDDMM(draftDateDDMM)}
+                  onChangeText={(v) => {
+                    const digits = String(v || "").replace(/[^0-9]/g, "").slice(0, 4);
+                    setDraftDateDDMM(digits);
+                    if (digits.length) {
+                      setDraftDateMode("custom");
+                      setDraftCalendarTs(null);
+                    }
+                  }}
+                  placeholder={tr("tasks.datePlaceholder", "DDMM")}
+                  placeholderTextColor={theme.colors.muted}
+                  autoCapitalize="none"
+                  keyboardType="number-pad"
+                  maxLength={10}
+                  style={[styles.input, styles.dateTimeInput, { fontSize: 14, fontWeight: "800", paddingVertical: 10 }]}
+                />
 
-              <TextInput
-                value={formatTimeMasked(draftTimeDigits)}
-                onChangeText={(txt) => setDraftTimeDigits(digitsOnly(txt))}
-                placeholder={tr("tasks.new.placeholder.time", "e.g. 16:30")}
-                placeholderTextColor={theme.colors.muted}
-                keyboardType="number-pad"
-                style={[styles.input, { fontSize: 14, fontWeight: "800", paddingVertical: 10 }]}
-              />
+                <TextInput
+                  value={formatTimeMasked(draftTimeDigits)}
+                  onChangeText={(txt) => setDraftTimeDigits(digitsOnly(txt))}
+                  placeholder={tr("tasks.new.placeholder.time", "e.g. 16:30")}
+                  placeholderTextColor={theme.colors.muted}
+                  keyboardType="number-pad"
+                  style={[styles.input, styles.dateTimeInput, { fontSize: 14, fontWeight: "800", paddingVertical: 10 }]}
+                />
+              </View>
 
               {/* Reminder (minutes before due time) */}
               <View style={{ marginTop: 10 }}>
-                <Text style={{ fontSize: 12, fontWeight: "800", color: PALETTE.muted }}>{tr("tasks.reminder.label", "Reminder")}</Text>
+                <Text style={[{ fontSize: 12, fontWeight: "800", color: theme.colors.muted }, TYPO.body]}>{tr("tasks.reminder.label", "Reminder")}</Text>
 
                 <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8, marginTop: 8 }}>
                   <Button
@@ -904,13 +964,13 @@ export default function TasksScreen() {
                 </View>
 
                 {!digitsOnly(draftTimeDigits) && draftReminderOffset ? (
-                  <Text style={{ marginTop: 6, fontSize: 12, fontWeight: "800", color: PALETTE.muted }}>
+                  <Text style={[{ marginTop: 6, fontSize: 12, fontWeight: "800", color: theme.colors.muted }, TYPO.body]}>
                     {tr("tasks.reminder.requiresTime", "Set a time to enable reminders.")}
                   </Text>
                 ) : null}
               </View>
 
-              {/* Repeat (interval days) */}
+              {SHOW_REPEAT_UI ? (
               <View style={{ marginTop: 12 }}>
                 <View
                   style={{
@@ -923,7 +983,7 @@ export default function TasksScreen() {
                   }}
                 >
                   <View style={{ flexDirection: "row", alignItems: "center" }}>
-                    <Text style={{ fontSize: 13, fontWeight: "800", color: PALETTE.muted }}>{tr("tasks.new.repeatEveryDays", "Repeat every")}</Text>
+                    <Text style={[{ fontSize: 13, fontWeight: "800", color: theme.colors.muted }, TYPO.body]}>{tr("tasks.new.repeatEveryDays", "Repeat every")}</Text>
 
                     <TextInput
                       value={repeatEnabled ? draftRepeatDays : ""}
@@ -947,16 +1007,16 @@ export default function TasksScreen() {
                         borderRadius: 10,
                         fontSize: 14,
                         fontWeight: "900",
-                        color: PALETTE.text,
+                        color: theme.colors.text,
                         backgroundColor: theme.colors.background,
                       }}
                     />
 
-                    <Text style={{ fontSize: 13, fontWeight: "800", color: PALETTE.muted, marginRight: 10 }}>{tr("tasks.repeat.days", "days")}</Text>
+                    <Text style={[{ fontSize: 13, fontWeight: "800", color: theme.colors.muted, marginRight: 10 }, TYPO.body]}>{tr("tasks.repeat.days", "days")}</Text>
 
                     <View style={{ flex: 1 }} />
 
-                    <Text style={{ fontSize: 13, fontWeight: "800", color: PALETTE.muted, marginRight: 8 }}>
+                    <Text style={[{ fontSize: 13, fontWeight: "800", color: theme.colors.muted, marginRight: 8 }, TYPO.body]}>
                       {repeatEnabled ? tr("common.on", "On") : tr("common.off", "Off")}
                     </Text>
                     <Switch
@@ -974,13 +1034,15 @@ export default function TasksScreen() {
                 </View>
               </View>
 
+              ) : null}
+
               {/* Assignee picker overlay modal */}
               {assigneeOpen ? (
                 <Modal visible transparent animationType="fade" onRequestClose={() => setAssigneeOpen(false)}>
                   <Pressable style={styles.dropdownBackdrop} onPress={() => setAssigneeOpen(false)} />
                   <View style={[styles.dropdownPanel, { bottom: Math.max(16, kbH + 16) }]}>
                     <View style={styles.assigneePickerHeader}>
-                      <Text style={styles.assigneePickerTitle}>{tr("tasks.new.assignTo", "Who should do this?")}</Text>
+                      <Text style={[styles.assigneePickerTitle, TYPO.title]}>{tr("tasks.new.assignTo", "Who should do this?")}</Text>
                       <Pressable onPress={() => setAssigneeOpen(false)} hitSlop={12} style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1, padding: 4 })}>
                         <Ionicons name="close" size={18} color={theme.colors.muted} />
                       </Pressable>
@@ -1024,12 +1086,12 @@ export default function TasksScreen() {
                 }}
                 style={styles.assigneeRow}
               >
-                <Text style={styles.assigneeLabel} numberOfLines={1}>
+                <Text style={[styles.assigneeLabel, TYPO.body]} numberOfLines={1}>
                   {tr("tasks.new.assignTo", "Who should do this?")}
                 </Text>
 
                 <View style={styles.assigneeRight}>
-                  <Text style={styles.assigneeValue} numberOfLines={1} ellipsizeMode="tail">
+                  <Text style={[styles.assigneeValue, TYPO.body]} numberOfLines={1} ellipsizeMode="tail">
                     {draftAssigneeName ? String(draftAssigneeName) : tr("tasks.assign.selectCta", "Select")}
                   </Text>
                   <Ionicons name="chevron-forward" size={18} color={theme.colors.muted} />
@@ -1071,7 +1133,7 @@ export default function TasksScreen() {
 
         <BottomSheet visible={calendarOpen} onClose={() => setCalendarOpen(false)}>
           <Card>
-            <Text style={{ fontSize: 18, fontWeight: "900", color: PALETTE.text }}>{tr("tasks.calendar", "Calendar")}</Text>
+            <Text style={[{ fontSize: 18, fontWeight: "900", color: theme.colors.text }, TYPO.title]}>{tr("tasks.calendar", "Calendar")}</Text>
 
             <View style={{ marginTop: 12 }}>
               {DateTimePicker ? (
@@ -1126,7 +1188,7 @@ export default function TasksScreen() {
                 </>
               ) : (
                 <>
-                  <Text style={{ color: PALETTE.muted, fontWeight: "700" }}>
+                  <Text style={[{ color: theme.colors.muted, fontWeight: "700" }, TYPO.body]}>
                     {tr("tasks.calendarMissing", "Calendar picker not installed. Enter DDMM; calendar is optional.")}
                   </Text>
 
@@ -1166,26 +1228,13 @@ export default function TasksScreen() {
   );
 }
 
-const FONT = {
-  title: (theme as any)?.fonts?.title ?? (Platform.OS === "ios" ? "AvenirNext-Heavy" : "sans-serif"),
-  body: (theme as any)?.fonts?.body ?? (Platform.OS === "ios" ? "AvenirNext-Regular" : "sans-serif"),
-};
 
-const PALETTE = {
-  text: "#0B1220",
-  muted: "#667085",
-  primary: "#2F6BFF",
-  card: "rgba(255,255,255,0.94)",
-  cardSoft: "rgba(242,248,255,0.92)",
-  border: "rgba(140,160,190,0.18)",
-  borderBlue: "rgba(47,107,255,0.30)",
-};
 
 const FROST = {
-  bg: PALETTE.card,
+  bg: theme.colors.card,
   bgStrong: "rgba(255,255,255,0.96)",
   border: "rgba(255,255,255,0.95)",
-  borderSoft: PALETTE.border,
+  borderSoft: theme.colors.border,
   shadow:
     Platform.OS === "android"
       ? { elevation: 5 }
@@ -1248,11 +1297,11 @@ const styles: any = {
     justifyContent: "space-between",
     gap: 12,
   },
-  heroLeft: { flex: 1, minWidth: 0, paddingRight: 150 },
+  heroLeft: { flex: 1, minWidth: 0, paddingRight: 170 },
   heroArt: {
     position: "absolute",
-    right: 16,
-    top: -20,
+    right: 24,
+    top: -22,
     width: 110,
     height: 110,
     pointerEvents: "none",
@@ -1274,20 +1323,8 @@ const styles: any = {
     fontWeight: "900",
   },
 
-  heroTitle: {
-    fontSize: 24,
-    fontWeight: "800",
-    fontFamily: FONT.title,
-    color: PALETTE.text,
-    letterSpacing: -0.7,
-  },
-  heroSub: {
-    marginTop: 6,
-    fontSize: 15,
-    fontWeight: "800",
-    fontFamily: FONT.body,
-    color: "#556377",
-  },
+  heroTitle: { fontSize: 22, lineHeight: 24, fontWeight: "900", color: theme.colors.text, letterSpacing: 0.2 },
+  heroSub: { marginTop: 4, fontSize: 13, lineHeight: 16, fontWeight: "700", color: theme.colors.muted },
 
   statsPanel: {
     padding: 10,
@@ -1315,14 +1352,14 @@ menuPill: {
 
   menuPillActive: {
     backgroundColor: "rgba(47,107,255,0.10)",
-    borderColor: PALETTE.borderBlue,
+    borderColor: "rgba(47,107,255,0.30)",
   },
   menuBig: {
     fontSize: 18,
     fontWeight: "800",
     fontFamily: FONT.title,
     textAlign: "center",
-    color: PALETTE.text,
+    color: theme.colors.text,
   },
   menuSmall: {
     marginTop: 2,
@@ -1330,7 +1367,7 @@ menuPill: {
     fontWeight: "700",
     fontFamily: FONT.body,
     textAlign: "center",
-    color: PALETTE.muted,
+    color: theme.colors.muted,
   },
 
   heroAccentBg: {
@@ -1339,14 +1376,14 @@ menuPill: {
     right: 0,
     bottom: 0,
     height: 6,
-    backgroundColor: "rgba(210,225,255,0.55)",
+    backgroundColor: "#f1f5f9",
   },
   heroAccent: {
     height: 6,
     width: "52%",
     borderTopRightRadius: 999,
     borderBottomRightRadius: 999,
-    backgroundColor: PALETTE.primary,
+    backgroundColor: theme.colors.primary,
   },
 
   taskCard: {
@@ -1386,10 +1423,10 @@ menuPill: {
     fontWeight: "800",
     fontSize: 17,
     fontFamily: FONT.title,
-    color: PALETTE.text,
+    color: theme.colors.text,
   },
   taskMeta: {
-    color: PALETTE.muted,
+    color: theme.colors.muted,
     fontWeight: "700",
     fontSize: 12,
     fontFamily: FONT.body,
@@ -1398,7 +1435,7 @@ menuPill: {
   statusPill: {
     alignSelf: "flex-start",
     borderWidth: 1,
-    borderColor: PALETTE.border,
+    borderColor: theme.colors.border,
     backgroundColor: "rgba(47,107,255,0.10)",
     borderRadius: 999,
     paddingHorizontal: 10,
@@ -1407,7 +1444,7 @@ menuPill: {
   statusPillText: {
     fontSize: 12,
     fontWeight: "900",
-    color: PALETTE.primary,
+    color: theme.colors.primary,
     fontFamily: FONT.body,
   },
 
@@ -1428,16 +1465,16 @@ menuPill: {
     borderWidth: 2,
   },
   tlDotDone: {
-    backgroundColor: PALETTE.primary,
-    borderColor: PALETTE.primary,
+    backgroundColor: theme.colors.primary,
+    borderColor: theme.colors.primary,
   },
   tlDotActive: {
     backgroundColor: "transparent",
-    borderColor: PALETTE.primary,
+    borderColor: theme.colors.primary,
   },
   tlDotPending: {
     backgroundColor: "transparent",
-    borderColor: PALETTE.border,
+    borderColor: theme.colors.border,
   },
   tlLine: {
     height: 2,
@@ -1446,11 +1483,11 @@ menuPill: {
     borderRadius: 999,
   },
   tlLineDone: {
-    backgroundColor: PALETTE.primary,
+    backgroundColor: theme.colors.primary,
     opacity: 0.9,
   },
   tlLinePending: {
-    backgroundColor: PALETTE.border,
+    backgroundColor: theme.colors.border,
     opacity: 0.9,
   },
 
@@ -1474,7 +1511,17 @@ menuPill: {
     flexDirection: "row",
     flexWrap: "wrap",
     gap: 8,
+  },  // Date + Time in one row (saves vertical space)
+  dateTimeRow: {
+    marginTop: 10,
+    flexDirection: "row",
+    gap: 10,
   },
+  dateTimeInput: {
+    flex: 1,
+    marginTop: 0, // override styles.input marginTop
+  },
+
   dateBtn: {
     flexGrow: 1,
     flexBasis: "31%",
@@ -1517,13 +1564,13 @@ menuPill: {
   assigneePickerTitle: {
     fontSize: 14,
     fontWeight: "900",
-    color: PALETTE.text,
+    color: theme.colors.text,
   },
   assigneeLabel: {
     fontSize: 14,
     fontWeight: "700",
     fontFamily: FONT.body,
-    color: PALETTE.muted,
+    color: theme.colors.muted,
     marginRight: 10,
   },
   assigneeRight: {
@@ -1535,7 +1582,7 @@ menuPill: {
   assigneeValue: {
     fontSize: 15,
     fontWeight: "900",
-    color: PALETTE.text,
+    color: theme.colors.text,
     maxWidth: "85%",
   },
   assigneeChevron: {
@@ -1543,7 +1590,7 @@ menuPill: {
     fontSize: 22,
     lineHeight: 22,
     fontWeight: "900",
-    color: PALETTE.muted,
+    color: theme.colors.muted,
   },
 
   sheetBackdrop: {
@@ -1595,6 +1642,6 @@ menuPill: {
     borderRadius: 16,
     padding: 12,
     backgroundColor: FROST.bgStrong,
-    color: PALETTE.text,
+    color: theme.colors.text,
   },
 };

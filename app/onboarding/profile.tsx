@@ -3,6 +3,7 @@ import React, { useMemo, useState } from "react";
 import { Alert, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import { router } from "expo-router";
 import { supabase } from "../../lib/supabase";
+import { useMembers } from "../../lib/members";
 
 import { Screen } from "../../src/ui/components/Screen";
 import { Card } from "../../src/ui/components/Card";
@@ -31,6 +32,9 @@ function Pill({
 
 export default function OnboardingProfileScreen() {
   const tr = useT() as any;
+  const members = useMembers() as any;
+  const inFamily = !!members?.inFamily;
+  const refreshMembers = members?.refreshMembers ?? members?.refresh ?? (async () => {});
 
   const [name, setName] = useState("");
   const [role, setRole] = useState<Role>("parent");
@@ -42,27 +46,36 @@ export default function OnboardingProfileScreen() {
   }, [role, gender]);
 
   async function goNext() {
-  const n = String(name ?? "").trim();
-  if (!n) {
-    Alert.alert(tr("common.error", "Error"), tr("settings.myNameRequired", "Please enter your name."));
-    return;
-  }
+    const n = String(name ?? "").trim();
+    if (!n) {
+      Alert.alert(tr("common.error", "Error"), tr("settings.myNameRequired", "Please enter your name."));
+      return;
+    }
 
-  try {
-    // Save profile to user metadata so the global AuthGate can validate it
-    const { error } = await supabase.auth.updateUser({
-      data: { name: n, role, gender },
-    });
-    if (error) throw error;
+    try {
+      // Save profile to user metadata so the global AuthGate can validate it
+      const { error } = await supabase.auth.updateUser({
+        data: { name: n, role, gender },
+      });
+      if (error) throw error;
 
-    router.push({
-      pathname: "/onboarding/family",
-      params: { name: n, role, gender, avatarKey },
-    });
-  } catch (e: any) {
-    Alert.alert(tr("common.error", "Error"), e?.message ?? "Failed to save profile.");
+      // ✅ If the user is ALREADY in a family, we must NOT send them to /onboarding/family.
+      // This prevents the "create/join family" screen from showing to existing members.
+      if (inFamily) {
+        await supabase.auth.refreshSession().catch(() => {});
+        await refreshMembers();
+        router.replace("/(tabs)/home");
+        return;
+      }
+
+      router.push({
+        pathname: "/onboarding/family",
+        params: { name: n, role, gender, avatarKey },
+      });
+    } catch (e: any) {
+      Alert.alert(tr("common.error", "Error"), e?.message ?? "Failed to save profile.");
+    }
   }
-}
 
   async function doLogout() {
     try {

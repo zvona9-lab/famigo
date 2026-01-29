@@ -4,8 +4,8 @@ type QueueRow = {
   id: string;
   type: string;
   user_id: string;
-  task_id: string;
-  family_id: string;
+  task_id: string | null;
+  family_id: string | null;
   payload: any;
   processed: boolean;
   created_at: string;
@@ -15,11 +15,11 @@ function extractExpoToken(row: any): string | null {
   if (!row || typeof row !== "object") return null;
 
   const candidates = [
-    row.expo_push_token,
-    row.push_token,
-    row.token,
-    row.expoToken,
-    row.expo_token,
+    (row as any).expo_push_token,
+    (row as any).push_token,
+    (row as any).token,
+    (row as any).expoToken,
+    (row as any).expo_token,
   ].filter((x: any) => typeof x === "string");
 
   const anyStrings = Object.values(row).filter((v) => typeof v === "string") as string[];
@@ -52,6 +52,15 @@ function buildShoppingBody(payload: any): { title: string; body: string } {
     (more > 0 ? `${list} +${more} more` : list || "Open the app");
 
   const title = from ? `${from} shared a shopping list` : "Shopping list";
+  return { title, body };
+}
+
+function buildTaskReminderBody(payload: any): { title: string; body: string } {
+  // payload from enqueue_due_task_reminders includes: title, due_at, reminder_at, etc.
+  const taskTitle = String(payload?.title ?? "").trim();
+  const dueAt = payload?.due_at ? String(payload.due_at) : "";
+  const title = taskTitle || "Task reminder";
+  const body = dueAt ? `Due: ${dueAt}` : "Open the app";
   return { title, body };
 }
 
@@ -89,16 +98,25 @@ Deno.serve(async (req) => {
     .select("*")
     .eq("processed", false)
     .order("created_at", { ascending: true })
-    .limit(5);
+    .limit(10);
 
   if (error || !rows?.length) {
-    return new Response(JSON.stringify({ ok: true, processed: 0, note: "No queue items" }), { status: 200, headers: { "Content-Type": "application/json" } });
+    return new Response(
+      JSON.stringify({ ok: true, processed: 0, note: "No queue items" }),
+      { status: 200, headers: { "Content-Type": "application/json" } }
+    );
   }
 
   let processedCount = 0;
 
   for (const item of rows as QueueRow[]) {
-    const supported = item.type === "task_assigned" || item.type === "shopping_list_sent";
+    const supported =
+      item.type === "task_assigned" ||
+      item.type === "task_reminder" ||
+      item.type === "shopping_list_sent" ||
+      item.type === "planner_evening_reminder";
+
+    // Mark unsupported items as processed to avoid clogging the queue
     if (!supported) {
       await admin.from("notification_queue").update({ processed: true }).eq("id", item.id);
       processedCount++;
@@ -115,6 +133,7 @@ Deno.serve(async (req) => {
         ?.map(extractExpoToken)
         .filter((t): t is string => Boolean(t)) ?? [];
 
+    // If user has no valid tokens, consider it processed to avoid retry loops
     if (!tokens.length) {
       await admin.from("notification_queue").update({ processed: true }).eq("id", item.id);
       processedCount++;
@@ -143,13 +162,61 @@ Deno.serve(async (req) => {
       continue;
     }
 
+    if (item.type === "task_reminder") {
+      const tb = buildTaskReminderBody(item.payload);
+
+      await sendExpoPush(
+        tokens.map((to) => ({
+          to,
+          title: tb.title,
+          body: tb.body,
+          data: {
+            kind: "task_reminder",
+            task_id: item.task_id,
+            family_id: item.family_id,
+          },
+        }))
+      );
+
+      await admin.from("notification_queue").update({ processed: true }).eq("id", item.id);
+      processedCount++;
+      continue;
+    }
+
+
+    if (item.type === "planner_evening_reminder") {
+      const count = Number(item.payload?.count ?? 0);
+
+      const title = "🗓️ Sutra imate plan";
+      const body =
+        count > 1
+          ? `Imate ${count} planirane obaveze za sutra`
+          : "Imate 1 planiranu obavezu za sutra";
+
+      await sendExpoPush(
+        tokens.map((to) => ({
+          to,
+          title,
+          body,
+          data: {
+            kind: "planner",
+            family_id: item.family_id,
+          },
+        }))
+      );
+
+      await admin.from("notification_queue").update({ processed: true }).eq("id", item.id);
+      processedCount++;
+      continue;
+    }
+
     // shopping_list_sent
-    const tb = buildShoppingBody(item.payload);
+    const sb = buildShoppingBody(item.payload);
     await sendExpoPush(
       tokens.map((to) => ({
         to,
-        title: tb.title,
-        body: tb.body,
+        title: sb.title,
+        body: sb.body,
         data: {
           kind: "shopping_list",
           family_id: item.family_id,
@@ -158,8 +225,11 @@ Deno.serve(async (req) => {
     );
 
     await admin.from("notification_queue").update({ processed: true }).eq("id", item.id);
-      processedCount++;
+    processedCount++;
   }
 
-  return new Response(JSON.stringify({ ok: true, processed: processedCount }), { status: 200, headers: { "Content-Type": "application/json" } });
+  return new Response(
+    JSON.stringify({ ok: true, processed: processedCount }),
+    { status: 200, headers: { "Content-Type": "application/json" } }
+  );
 });

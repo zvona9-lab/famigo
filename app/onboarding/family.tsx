@@ -1,6 +1,6 @@
 // /app/onboarding/family.tsx
-import React, { useMemo, useState } from "react";
-import { Alert, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
+import React, { useEffect, useMemo, useState } from "react";
+import { ActivityIndicator, Alert, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
 
 import { Screen } from "../../src/ui/components/Screen";
@@ -25,13 +25,15 @@ export default function OnboardingFamilyScreen() {
   }, [params]);
 
   const membersCtx = useMembers() as any;
+  const inFamily = !!membersCtx?.inFamily;
+  const membersReady = membersCtx?.ready !== false; // treat undefined as ready
   const createFamily = membersCtx?.createFamily as undefined | ((name: string) => Promise<boolean>);
   const joinFamilyWithCode = membersCtx?.joinFamilyWithCode as undefined | ((code: string) => Promise<boolean>);
   const refreshMembers = membersCtx?.refreshMembers ?? membersCtx?.refresh ?? (async () => {});
 
   const [createName, setCreateName] = useState("");
   const [inviteCode, setInviteCode] = useState("");
-  const [busy, setBusy] = useState<"create" | "join" | null>(null);
+  const [busy, setBusy] = useState<"create" | "join" | "finish" | null>(null);
 
   async function applyProfileToMyMember() {
     const { data: userRes, error: userErr } = await supabase.auth.getUser();
@@ -39,7 +41,6 @@ export default function OnboardingFamilyScreen() {
     const uid = userRes?.user?.id;
     if (!uid) throw new Error("Missing user");
 
-    // Try to update the newest membership row that has a family_id (after join/create)
     const updatePayload: any = {
       display_name: profile.name,
       role: profile.role,
@@ -55,7 +56,6 @@ export default function OnboardingFamilyScreen() {
           : "boy"),
     };
 
-    // Best effort update (schema-safe): update only rows that are in a family
     const { error: upErr } = await supabase
       .from("family_members")
       .update(updatePayload)
@@ -63,7 +63,6 @@ export default function OnboardingFamilyScreen() {
       .not("family_id", "is", null);
 
     if (upErr) {
-      // If family_id column name differs, fall back to updating all rows for this user (still safe for most setups)
       const { error: upErr2 } = await supabase
         .from("family_members")
         .update(updatePayload)
@@ -74,13 +73,25 @@ export default function OnboardingFamilyScreen() {
   }
 
   async function finish() {
-    // Ensure fresh user_metadata is available for the gate (prevents bounce back to Profile)
+    setBusy("finish");
     await supabase.auth.refreshSession().catch(() => {});
     await refreshMembers();
-    await applyProfileToMyMember();
-    await refreshMembers();
+    if (profile.name) {
+      await applyProfileToMyMember().catch(() => {});
+      await refreshMembers();
+    }
     router.replace("/(tabs)/home");
   }
+
+  // ✅ SAFETY GUARD:
+  // If user is ALREADY in a family, never show create/join.
+  useEffect(() => {
+    if (!membersReady) return;
+    if (inFamily) {
+      finish();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [membersReady, inFamily]);
 
   async function doCreate() {
     const n = String(createName ?? "").trim();
@@ -122,6 +133,16 @@ export default function OnboardingFamilyScreen() {
     } finally {
       setBusy(null);
     }
+  }
+
+  if (!membersReady || busy === "finish" || inFamily) {
+    return (
+      <Screen safeBottom>
+        <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
+          <ActivityIndicator size="large" />
+        </View>
+      </Screen>
+    );
   }
 
   return (
@@ -185,11 +206,21 @@ export default function OnboardingFamilyScreen() {
           </View>
         </Card>
 
-        <View style={{ marginTop: 14, alignItems: "center" }}>
+        <View style={{ marginTop: 20, alignItems: "center" }}>
           <Button
             title={tr("common.back", "Back")}
-            variant="ghost"
-            onPress={() => router.replace({ pathname: "/onboarding/profile", params: { name: profile.name, role: profile.role, gender: profile.gender, avatarKey: profile.avatarKey } })}
+            onPress={() =>
+              router.replace({
+                pathname: "/onboarding/profile",
+                params: {
+                  name: profile.name,
+                  role: profile.role,
+                  gender: profile.gender,
+                  avatarKey: profile.avatarKey,
+                },
+              })
+            }
+            style={{ width: "50%" }}
           />
         </View>
       </ScrollView>

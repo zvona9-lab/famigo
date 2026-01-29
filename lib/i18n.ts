@@ -313,7 +313,7 @@ const en = {
       "kids": "Kids",
       "parents": "Parents",
       "done": "Done",
-      "family": "Obitelj"
+      "family": "Family"
     },
     "doneToday": "Done today",
     "listTitle": "Members list",
@@ -337,6 +337,20 @@ const en = {
     "editHintLongPress": "Tip: Long press a member to edit."
   },
   "auth": {
+    "tagline": "Family tasks, simple",
+    "title": "Sign in",
+    "registerTitle": "Create account",
+    "email": "Email",
+    "password": "Password",
+    "confirmPassword": "Confirm password",
+    "togglePassword": "Show or hide password",
+    "placeholders": {
+      "email": "email@example.com",
+      "password": "••••••••",
+      "confirmPassword": "••••••••"
+    },
+    "login": "Login",
+    "register": "Register",
     "missingUid": "You are not signed in (member id missing).",
     "invalidEmail": "Enter a valid email.",
     "magicLinkSent": "Check your email for the sign-in link.",
@@ -344,7 +358,9 @@ const en = {
     "loginMagicLink": "Login (magic link)",
     "sendLink": "Send link",
     "logout": "Logout",
-    "signedInAs": "Signed in as:"
+    "signedInAs": "Signed in as:",
+    "deleteAccount": "Delete account",
+    "deleteAccountWarning": "This permanently removes your account and all data."
   },
   "shopping": {
     "title": "Shopping",
@@ -393,74 +409,63 @@ const en = {
     "sentBody": "Shopping list notification was sent."
   },
   "home": {
-    "anytimeHint": "No due date",
-    "scope": {
-      "family": "Family",
-      "kids": "Kids"
+    "title": "Daily tasks",
+    "subtitle": "Quick overview and focus",
+    "plannerToday": "Planner — today",
+    "tasksLatest": "Tasks — newest",
+    "shopping": "Shopping",
+    "shoppingCartCount": "You have {{count}} items in the cart",
+    "viewMore": "View more",
+    "noFamilyShopping": "Join or create a family to use the shared shopping list.",
+    "noTime": "Any time",
+    "shoppingEmpty": "Shopping list is empty",
+  },
+
+
+  "planner": {
+    "title": "Planner",
+    "subtitle": "Your simple daily plan (private or shared).",
+    "selectedDay": "Selected",
+    "hintPickDay": "Pick a day on the calendar, then tap + New",
+    "newBtn": "+ New",
+    "newTitle": "New plan",
+    "editTitle": "Edit plan",
+    "placeholder": {
+      "title": "e.g. Doctor, pay bills, call grandma"
     },
-    "stats": {
-      "active": "Active",
-      "review": "Needs approval",
-      "done": "Done"
+    "timeLabel": "Time (optional)",
+    "timePlaceholder": "HHMM (e.g. 1630)",
+    "anytime": "Any",
+    "for": "For",
+    "shared": "Shared",
+    "forWho": "For who?",
+    "family": "Family",
+    "someone": "Someone",
+    "assigned": {
+      "all": "Family",
+      "some": "Selected"
     },
-    "doneHint": "Recently completed",
-    "emptyTitle": "No tasks",
-    "reviewTitle": "Needs approval",
-    "todayHint": "Focus",
-    "anytimeTitle": "Anytime",
-    "filterPrefix": "Filter",
-    "emptySubtitle": "Add tasks to get started.",
-    "doneTitle": "Done",
-    "familyPrefix": "Family",
-    "reviewHint": "Waiting for your decision",
-    "badge": {
-      "attention": "ATTN"
-    },
-    "reviewHintChild": "Waiting for parent",
-    "todayTitle": "Today",
-    "tagline": "Family tasks made simple",
-    "upcomingHint": "Next 7 days",
-    "upcomingTitle": "Upcoming",
-    "subtitle": "Quick overview",
-    "info": {
-      "scope": {
-        "title": "Scope",
-        "body": "Choose which tasks you want to focus on. Family shows all tasks, Kids shows only kids' tasks."
-      },
-      "review": {
-        "title": "Review",
-        "body": {
-          "parent": "Parent: confirm the task is done.",
-          "child": "Child: send back the task to the list for changes."
-        }
-      },
-      "actions": {
-        "title": "Task actions",
-        "open": "Open: task is available to claim.",
-        "claimed": "Claimed: someone is working on it.",
-        "review": {
-          "parent": "Needs approval: parent should approve or reject.",
-          "child": "Needs approval: waiting for parent decision."
-        }
-      }
-    },
-    "brandTitle": "FamiGo",
-    "scopeHint": {
-      "me": "Tasks that are for you",
-      "kids": "Tasks for all kids",
-      "family": "All family tasks"
-    }
+    "someHint": "Tip: pick one or more members. (Long-press items to delete)",
+    "noFamilyHint": "Tip: join a family to share a plan with a member.",
+    "noStorage": "Note: AsyncStorage is not installed, so plans will reset when the app reloads.",
+    "calendarMissing": "Calendar component is not installed. If you want this month view, install react-native-calendars.",
+    "emptyTitle": "No plans yet",
+    "emptyBody": "Tap + New and add your first plan for this day.",
+    "titleRequired": "Title is required.",
+    "timeInvalid": "Time must be HH:MM (e.g. 1630).",
+    "pickSomeone": "Choose at least one member.",
+    "deleteConfirm": "Delete this item?"
   }
 };
 
 const hr = {
-  "tabs": {
-    "home": "Danas",
-    "members": "Članovi",
-    "tasks": "Zadaci",
-    "shopping": "Kupovina",
-    "settings": "Postavke"
-  },
+  tabs: {
+    home: "Početna",
+    members: "Članovi",
+    tasks: "Zadaci",
+    shopping: "Kupovina",
+    planner: "Planer",
+    settings: "Postavke",  },
   "onboarding": {
     "profile": {
       "title": "Postavi svoj profil",
@@ -797,6 +802,8 @@ const hr = {
       "password": "••••••••",
       "confirmPassword": "••••••••"
     },
+    "login": "Prijava",
+    "register": "Registracija",
     "passwordLoginBtn": "Prijavi se",
     "registerBtn": "Izradi račun",
     "forgotPasswordBtn": "Zaboravljena lozinka?",
@@ -827,7 +834,9 @@ const hr = {
     "loginMagicLink": "Prijava (magic link)",
     "sendLink": "Pošalji link",
     "logout": "Odjava",
-    "signedInAs": "Prijavljen kao:"
+    "signedInAs": "Prijavljen kao:",
+    "deleteAccount": "Obriši račun",
+    "deleteAccountWarning": "Ova radnja trajno briše tvoj račun i sve podatke."
   },
   "shopping": {
     "title": "Kupovina",
@@ -876,70 +885,64 @@ const hr = {
     "sentBody": "Notifikacija s popisom za kupnju je poslana."
   },
   "home": {
-    "anytimeTitle": "Bilo kada",
-    "anytimeHint": "Bez roka",
-    "badge": {
-      "attention": "PAŽNJA"
-    },
-    "doneTitle": "Riješeno",
-    "doneHint": "Nedavno završeno",
-    "emptyTitle": "Nema zadataka",
-    "emptySubtitle": "Dodaj zadatke i organiziraj dan.",
-    "familyPrefix": "Obitelj",
-    "filterPrefix": "Filter",
-    "reviewTitle": "Za potvrdu",
-    "reviewHint": "Čeka tvoju odluku",
-    "reviewHintChild": "Čeka roditelja",
-    "scope": {
-      "family": "Obitelj",
-      "kids": "Djeca",
-      "me": "Ja"
-    },
-    "status": {
-      "open": "Otvoren"
-    },
+    "title": "Dnevne obaveze",
     "subtitle": "Brzi pregled i fokus",
-    "tabAll": "Sve",
-    "tabKids": "Djeca",
-    "tabMe": "Ja",
-    "tagline": "Obiteljski zadaci, jednostavno",
-    "todayHint": "Fokus",
-    "todayTitle": "Danas",
-    "upcomingHint": "Sljedećih 7 dana",
-    "upcomingTitle": "Nadolazeće",
-    "stats": {
-      "active": "Aktivno",
-      "review": "Za potvrdu",
-      "done": "Riješeno"
+    "plannerToday": "Planer — danas",
+    "tasksLatest": "Zadaci — najnoviji",
+    "shopping": "Kupovina",
+    "shoppingCartCount": "Imaš {{count}} stavki u košarici",
+    "viewMore": "Vidi više",
+    "noFamilyShopping": "Pridruži se ili kreiraj obitelj za zajedničku listu kupovine.",
+    "noTime": "Bilo kada",
+    "shoppingEmpty": "Lista kupovine je prazna",
+plannerEmptyMe: "Danas nema planova",
+  plannerEmptyKids: "Nema planova za djecu",
+  plannerEmptyFamily: "Danas nema planova",
+
+  plannerEmptyFamilySub: "Isplaniraj jednu sitnicu ✨",
+  plannerEmptySub: "Sve je mirno 🙂",
+
+  tasksEmptyMe: "Nema zadataka za tebe",
+  tasksEmptyKids: "Djeca nemaju zadataka",
+  tasksEmptyFamily: "Nema otvorenih zadataka",
+
+  tasksEmptySub: "Sve je čisto. Neka tako i ostane 😄",
+  },
+
+
+  "planner": {
+    "title": "Planer",
+    "subtitle": "Tvoj jednostavan dnevni plan (privatno ili dijeljeno).",
+    "selectedDay": "Odabrano",
+    "hintPickDay": "Odaberi dan na kalendaru, zatim dodirni + Novo",
+    "newBtn": "+ Novo",
+    "newTitle": "Novi plan",
+    "editTitle": "Uredi plan",
+    "placeholder": {
+      "title": "npr. doktor, platiti račune, nazvati baku"
     },
-    "info": {
-      "scope": {
-        "title": "Opseg",
-        "body": "Odaberi na koje se zadatke želiš fokusirati. Obitelj prikazuje sve zadatke, a Djeca prikazuje samo dječje zadatke."
-      },
-      "review": {
-        "title": "Potvrda",
-        "body": {
-          "parent": "Roditelj: potvrdi da je zadatak riješen.",
-          "child": "Dijete: pošalji zadatak natrag na listu za izmjene."
-        }
-      },
-      "actions": {
-        "title": "Akcije zadatka",
-        "open": "Otvoren: zadatak je dostupan za preuzimanje.",
-        "claimed": "Preuzet: netko radi na zadatku.",
-        "review": {
-          "parent": "Za potvrdu: roditelj treba odobriti ili odbiti.",
-          "child": "Za potvrdu: čeka roditelja."
-        }
-      }
+    "timeLabel": "Vrijeme (opcionalno)",
+    "timePlaceholder": "HHMM (npr. 1630)",
+    "anytime": "Bilo kad",
+    "for": "Za",
+    "shared": "Dijeljeno",
+    "forWho": "Za koga?",
+    "family": "Obitelj",
+    "someone": "Netko",
+    "assigned": {
+      "all": "Obitelj",
+      "some": "Odabrano"
     },
-    "brandTitle": "FamiGo",
-    "scopeHint": {
-      "me": "Zadaci koji su za tebe",
-      "kids": "Zadaci za svu djecu",
-      "family": "Svi obiteljski zadaci"
-    }
+    "someHint": "Savjet: odaberi jednog ili više članova. (Dugi pritisak briše)",
+    "noFamilyHint": "Savjet: pridruži se obitelji kako bi dijelio plan s članom.",
+    "noStorage": "Napomena: AsyncStorage nije instaliran pa će se planovi resetirati kad se aplikacija ponovno učita.",
+    "calendarMissing": "Komponenta kalendara nije instalirana. Ako želiš mjesečni prikaz, instaliraj react-native-calendars.",
+    "emptyTitle": "Još nema planova",
+    "emptyBody": "Dodirni + Novo i dodaj prvi plan za ovaj dan.",
+    "titleRequired": "Naslov je obavezan.",
+    "timeInvalid": "Vrijeme mora biti HH:MM (npr. 1630).",
+    "pickSomeone": "Odaberi barem jednog člana.",
+    "deleteConfirm": "Obrisati ovu stavku?"
   }
 };
 
@@ -1363,63 +1366,51 @@ const it = {
     }
   },
   "home": {
-    "anytimeHint": "Nessuna scadenza",
-    "scope": {
-      "family": "Famiglia",
-      "kids": "Bambini"
+    "title": "Attività quotidiane",
+    "subtitle": "Panoramica rapida e focus",
+    "plannerToday": "Planner — oggi",
+    "tasksLatest": "Attività — più recenti",
+    "shopping": "Spesa",
+    "shoppingCartCount": "Hai {{count}} articoli nel carrello",
+    "viewMore": "Vedi altro",
+    "noFamilyShopping": "Unisciti o crea una famiglia per usare la lista della spesa condivisa.",
+    "noTime": "In qualsiasi momento",
+    "shoppingEmpty": "La lista della spesa è vuota",
+  },
+
+  "planner": {
+    "title": "Planner",
+    "subtitle": "Il tuo piano giornaliero semplice (privato o condiviso).",
+    "selectedDay": "Selezionato",
+    "hintPickDay": "Scegli un giorno nel calendario, poi tocca + Nuovo",
+    "newBtn": "+ Nuovo",
+    "newTitle": "Nuovo piano",
+    "editTitle": "Modifica piano",
+    "placeholder": {
+      "title": "es. medico, pagare le bollette, chiamare la nonna"
     },
-    "stats": {
-      "active": "Attive",
-      "review": "Da approvare",
-      "done": "Fatte"
+    "timeLabel": "Orario (opzionale)",
+    "timePlaceholder": "HHMM (es. 1630)",
+    "anytime": "Qualsiasi",
+    "for": "Per",
+    "shared": "Condiviso",
+    "forWho": "Per chi?",
+    "family": "Famiglia",
+    "someone": "Qualcuno",
+    "assigned": {
+      "all": "Famiglia",
+      "some": "Selezionati"
     },
-    "doneHint": "Completate di recente",
-    "emptyTitle": "Nessuna attività",
-    "reviewTitle": "Da approvare",
-    "todayHint": "Focus",
-    "anytimeTitle": "In qualsiasi momento",
-    "filterPrefix": "Filtro",
-    "emptySubtitle": "Aggiungi attività per iniziare.",
-    "doneTitle": "Fatte",
-    "familyPrefix": "Famiglia",
-    "reviewHint": "In attesa della tua decisione",
-    "badge": {
-      "attention": "ATTN"
-    },
-    "reviewHintChild": "In attesa del genitore",
-    "todayTitle": "Oggi",
-    "tagline": "Attività di famiglia, semplice",
-    "upcomingHint": "Prossimi 7 giorni",
-    "upcomingTitle": "In arrivo",
-    "subtitle": "Panoramica rapida",
-    "info": {
-      "scope": {
-        "title": "Ambito",
-        "body": "Scegli su quali attività vuoi concentrarti. Famiglia mostra tutte le attività, Bambini mostra solo quelle dei bambini."
-      },
-      "review": {
-        "title": "Verifica",
-        "body": {
-          "parent": "Genitore: conferma che l’attività è completata.",
-          "child": "Bambino: rimanda l’attività alla lista per modifiche."
-        }
-      },
-      "actions": {
-        "title": "Azioni attività",
-        "open": "Aperta: l’attività è disponibile da prendere.",
-        "claimed": "Presa: qualcuno ci sta lavorando.",
-        "review": {
-          "parent": "Da approvare: il genitore deve approvare o rifiutare.",
-          "child": "Da approvare: in attesa della decisione del genitore."
-        }
-      }
-    },
-    "brandTitle": "FamiGo",
-    "scopeHint": {
-      "me": "Attività per te",
-      "kids": "Attività per tutti i bambini",
-      "family": "Tutte le attività della famiglia"
-    }
+    "someHint": "Suggerimento: seleziona uno o più membri. (Pressione lunga per eliminare)",
+    "noFamilyHint": "Suggerimento: unisciti a una famiglia per condividere un piano con un membro.",
+    "noStorage": "Nota: AsyncStorage non è installato, quindi i piani verranno azzerati al riavvio dell'app.",
+    "calendarMissing": "Il componente calendario non è installato. Se vuoi la vista mensile, installa react-native-calendars.",
+    "emptyTitle": "Nessun piano ancora",
+    "emptyBody": "Tocca + Nuovo e aggiungi il primo piano per questo giorno.",
+    "titleRequired": "Il titolo è obbligatorio.",
+    "timeInvalid": "L'orario deve essere HH:MM (es. 1630).",
+    "pickSomeone": "Scegli almeno un membro.",
+    "deleteConfirm": "Eliminare questo elemento?"
   }
 };
 
@@ -1843,63 +1834,52 @@ const sl = {
     }
   },
   "home": {
-    "anytimeHint": "Brez roka",
-    "scope": {
-      "family": "Družina",
-      "kids": "Otroci"
+    "title": "Dnevne naloge",
+    "subtitle": "Hiter pregled in fokus",
+    "plannerToday": "Načrtovalnik — danes",
+    "tasksLatest": "Naloge — najnovejše",
+    "shopping": "Nakupovanje",
+    "shoppingCartCount": "V košarici imaš {{count}} izdelkov",
+    "viewMore": "Poglej več",
+    "noFamilyShopping": "Pridruži se ali ustvari družino za skupni nakupovalni seznam.",
+    "noTime": "Kadarkoli",
+    "shoppingEmpty": "Nakupovalni seznam je prazen",
+  },
+
+
+  "planner": {
+    "title": "Planer",
+    "subtitle": "Tvoj preprost dnevni plan (zasebno ali deljeno).",
+    "selectedDay": "Izbrano",
+    "hintPickDay": "Izberi dan na koledarju, nato tapni + Novo",
+    "newBtn": "+ Novo",
+    "newTitle": "Nov plan",
+    "editTitle": "Uredi plan",
+    "placeholder": {
+      "title": "npr. zdravnik, plačati račune, poklicati babico"
     },
-    "stats": {
-      "active": "Aktivno",
-      "review": "Za odobritev",
-      "done": "Opravljeno"
+    "timeLabel": "Čas (neobvezno)",
+    "timePlaceholder": "HHMM (npr. 1630)",
+    "anytime": "Kadarkoli",
+    "for": "Za",
+    "shared": "Deljeno",
+    "forWho": "Za koga?",
+    "family": "Družina",
+    "someone": "Nekdo",
+    "assigned": {
+      "all": "Družina",
+      "some": "Izbrano"
     },
-    "doneHint": "Nedavno opravljeno",
-    "emptyTitle": "Ni opravil",
-    "reviewTitle": "Za odobritev",
-    "todayHint": "Fokus",
-    "anytimeTitle": "Kadarkoli",
-    "filterPrefix": "Filter",
-    "emptySubtitle": "Dodaj opravila, da začneš.",
-    "doneTitle": "Opravljeno",
-    "familyPrefix": "Družina",
-    "reviewHint": "Čaka na tvojo odločitev",
-    "badge": {
-      "attention": "POZOR"
-    },
-    "reviewHintChild": "Čaka na starša",
-    "todayTitle": "Danes",
-    "tagline": "Družinska opravila, preprosto",
-    "upcomingHint": "Naslednjih 7 dni",
-    "upcomingTitle": "Prihaja",
-    "subtitle": "Hiter pregled",
-    "info": {
-      "scope": {
-        "title": "Obseg",
-        "body": "Izberi, na katera opravila se želiš osredotočiti. Družina pokaže vsa opravila, Otroci pa samo otroška opravila."
-      },
-      "review": {
-        "title": "Pregled",
-        "body": {
-          "parent": "Starš: potrdi, da je opravilo opravljeno.",
-          "child": "Otrok: pošlji opravilo nazaj na seznam za spremembe."
-        }
-      },
-      "actions": {
-        "title": "Dejanja opravila",
-        "open": "Odprto: opravilo je na voljo za prevzem.",
-        "claimed": "Prevzeto: nekdo dela na njem.",
-        "review": {
-          "parent": "Za odobritev: starš naj odobri ali zavrne.",
-          "child": "Za odobritev: čaka na odločitev starša."
-        }
-      }
-    },
-    "brandTitle": "FamiGo",
-    "scopeHint": {
-      "me": "Naloge zate",
-      "kids": "Naloge za vse otroke",
-      "family": "Vse družinske naloge"
-    }
+    "someHint": "Namig: izberi enega ali več članov. (Dolg pritisk za brisanje)",
+    "noFamilyHint": "Namig: pridruži se družini, da deliš plan s članom.",
+    "noStorage": "Opomba: AsyncStorage ni nameščen, zato se bodo plani po ponovnem zagonu aplikacije ponastavili.",
+    "calendarMissing": "Komponenta koledarja ni nameščena. Če želiš mesečni pogled, namesti react-native-calendars.",
+    "emptyTitle": "Ni planov",
+    "emptyBody": "Tapni + Novo in dodaj prvi plan za ta dan.",
+    "titleRequired": "Naslov je obvezen.",
+    "timeInvalid": "Čas mora biti HH:MM (npr. 1630).",
+    "pickSomeone": "Izberi vsaj enega člana.",
+    "deleteConfirm": "Izbrisati ta element?"
   }
 };
 
@@ -2323,63 +2303,52 @@ const fr = {
     }
   },
   "home": {
-    "anytimeHint": "Pas d’échéance",
-    "scope": {
-      "family": "Famille",
-      "kids": "Enfants"
+    "title": "Tâches du jour",
+    "subtitle": "Aperçu rapide et focus",
+    "plannerToday": "Agenda — aujourd’hui",
+    "tasksLatest": "Tâches — récentes",
+    "shopping": "Courses",
+    "shoppingCartCount": "Vous avez {{count}} articles dans le panier",
+    "viewMore": "Voir plus",
+    "noFamilyShopping": "Rejoignez ou créez une famille pour utiliser la liste de courses partagée.",
+    "noTime": "N’importe quand",
+    "shoppingEmpty": "La liste de courses est vide",
+  },
+
+
+  "planner": {
+    "title": "Planning",
+    "subtitle": "Votre plan quotidien simple (privé ou partagé).",
+    "selectedDay": "Sélectionné",
+    "hintPickDay": "Choisis un jour sur le calendrier, puis touche + Nouveau",
+    "newBtn": "+ Nouveau",
+    "newTitle": "Nouveau plan",
+    "editTitle": "Modifier le plan",
+    "placeholder": {
+      "title": "ex. médecin, payer les factures, appeler mamie"
     },
-    "stats": {
-      "active": "Actives",
-      "review": "À valider",
-      "done": "Terminées"
+    "timeLabel": "Heure (optionnel)",
+    "timePlaceholder": "HHMM (ex. 1630)",
+    "anytime": "N'importe",
+    "for": "Pour",
+    "shared": "Partagé",
+    "forWho": "Pour qui ?",
+    "family": "Famille",
+    "someone": "Quelqu’un",
+    "assigned": {
+      "all": "Famille",
+      "some": "Sélectionné"
     },
-    "doneHint": "Terminées récemment",
-    "emptyTitle": "Aucune tâche",
-    "reviewTitle": "À valider",
-    "todayHint": "Focus",
-    "anytimeTitle": "N’importe quand",
-    "filterPrefix": "Filtre",
-    "emptySubtitle": "Ajoutez des tâches pour commencer.",
-    "doneTitle": "Terminées",
-    "familyPrefix": "Famille",
-    "reviewHint": "En attente de votre décision",
-    "badge": {
-      "attention": "ATTN"
-    },
-    "reviewHintChild": "En attente du parent",
-    "todayTitle": "Aujourd’hui",
-    "tagline": "Les tâches familiales, simplement",
-    "upcomingHint": "7 prochains jours",
-    "upcomingTitle": "À venir",
-    "subtitle": "Aperçu rapide",
-    "info": {
-      "scope": {
-        "title": "Portée",
-        "body": "Choisissez les tâches sur lesquelles vous voulez vous concentrer. Famille affiche toutes les tâches, Enfants affiche uniquement celles des enfants."
-      },
-      "review": {
-        "title": "Validation",
-        "body": {
-          "parent": "Parent : confirmer que la tâche est faite.",
-          "child": "Enfant : renvoyer la tâche à la liste pour modifications."
-        }
-      },
-      "actions": {
-        "title": "Actions de la tâche",
-        "open": "Ouverte : la tâche est disponible à prendre.",
-        "claimed": "Prise : quelqu’un est dessus.",
-        "review": {
-          "parent": "À valider : le parent doit approuver ou refuser.",
-          "child": "À valider : en attente de la décision du parent."
-        }
-      }
-    },
-    "brandTitle": "FamiGo",
-    "scopeHint": {
-      "me": "Tâches pour toi",
-      "kids": "Tâches pour tous les enfants",
-      "family": "Toutes les tâches de la famille"
-    }
+    "someHint": "Astuce : sélectionne un ou plusieurs membres. (Appui long pour supprimer)",
+    "noFamilyHint": "Astuce : rejoins une famille pour partager un plan avec un membre.",
+    "noStorage": "Remarque : AsyncStorage n'est pas installé, donc les plans seront réinitialisés au rechargement de l'app.",
+    "calendarMissing": "Le composant calendrier n'est pas installé. Pour la vue mensuelle, installe react-native-calendars.",
+    "emptyTitle": "Aucun plan pour l’instant",
+    "emptyBody": "Touche + Nouveau et ajoute ton premier plan pour ce jour.",
+    "titleRequired": "Le titre est obligatoire.",
+    "timeInvalid": "L'heure doit être au format HH:MM (ex. 1630).",
+    "pickSomeone": "Choisis au moins un membre.",
+    "deleteConfirm": "Supprimer cet élément ?"
   }
 };
 
@@ -2803,63 +2772,52 @@ const de = {
     }
   },
   "home": {
-    "anytimeHint": "Kein Fälligkeitsdatum",
-    "scope": {
-      "family": "Familie",
-      "kids": "Kinder"
+    "title": "Tägliche Aufgaben",
+    "subtitle": "Schneller Überblick und Fokus",
+    "plannerToday": "Planer — heute",
+    "tasksLatest": "Aufgaben — neueste",
+    "shopping": "Einkaufen",
+    "shoppingCartCount": "Du hast {{count}} Artikel im Warenkorb",
+    "viewMore": "Mehr anzeigen",
+    "noFamilyShopping": "Tritt einer Familie bei oder erstelle eine, um die gemeinsame Einkaufsliste zu nutzen.",
+    "noTime": "Jederzeit",
+    "shoppingEmpty": "Die Einkaufsliste ist leer",
+  },
+
+
+  "planner": {
+    "title": "Planer",
+    "subtitle": "Dein einfacher Tagesplan (privat oder geteilt).",
+    "selectedDay": "Ausgewählt",
+    "hintPickDay": "Wähle einen Tag im Kalender und tippe dann auf + Neu",
+    "newBtn": "+ Neu",
+    "newTitle": "Neuer Plan",
+    "editTitle": "Plan bearbeiten",
+    "placeholder": {
+      "title": "z.B. Arzt, Rechnungen zahlen, Oma anrufen"
     },
-    "stats": {
-      "active": "Aktiv",
-      "review": "Zur Bestätigung",
-      "done": "Erledigt"
+    "timeLabel": "Uhrzeit (optional)",
+    "timePlaceholder": "HHMM (z.B. 1630)",
+    "anytime": "Beliebig",
+    "for": "Für",
+    "shared": "Geteilt",
+    "forWho": "Für wen?",
+    "family": "Familie",
+    "someone": "Jemand",
+    "assigned": {
+      "all": "Familie",
+      "some": "Ausgewählt"
     },
-    "doneHint": "Kürzlich erledigt",
-    "emptyTitle": "Keine Aufgaben",
-    "reviewTitle": "Zur Bestätigung",
-    "todayHint": "Fokus",
-    "anytimeTitle": "Jederzeit",
-    "filterPrefix": "Filter",
-    "emptySubtitle": "Füge Aufgaben hinzu, um zu starten.",
-    "doneTitle": "Erledigt",
-    "familyPrefix": "Familie",
-    "reviewHint": "Wartet auf deine Entscheidung",
-    "badge": {
-      "attention": "ACHT"
-    },
-    "reviewHintChild": "Wartet auf Elternteil",
-    "todayTitle": "Heute",
-    "tagline": "Familienaufgaben leicht gemacht",
-    "upcomingHint": "Nächste 7 Tage",
-    "upcomingTitle": "Demnächst",
-    "subtitle": "Schneller Überblick",
-    "info": {
-      "scope": {
-        "title": "Bereich",
-        "body": "Wähle, auf welche Aufgaben du dich konzentrieren willst. Familie zeigt alle Aufgaben, Kinder zeigt nur Aufgaben der Kinder."
-      },
-      "review": {
-        "title": "Prüfung",
-        "body": {
-          "parent": "Elternteil: bestätigen, dass die Aufgabe erledigt ist.",
-          "child": "Kind: Aufgabe zur Liste zurücksenden (für Änderungen)."
-        }
-      },
-      "actions": {
-        "title": "Aufgabenaktionen",
-        "open": "Offen: Aufgabe kann übernommen werden.",
-        "claimed": "Übernommen: jemand arbeitet daran.",
-        "review": {
-          "parent": "Zur Bestätigung: Elternteil soll annehmen oder ablehnen.",
-          "child": "Zur Bestätigung: wartet auf Entscheidung der Eltern."
-        }
-      }
-    },
-    "brandTitle": "FamiGo",
-    "scopeHint": {
-      "me": "Aufgaben für dich",
-      "kids": "Aufgaben für alle Kinder",
-      "family": "Alle Familienaufgaben"
-    }
+    "someHint": "Tipp: Wähle ein oder mehrere Mitglieder. (Langes Drücken zum Löschen)",
+    "noFamilyHint": "Tipp: Tritt einer Familie bei, um einen Plan mit einem Mitglied zu teilen.",
+    "noStorage": "Hinweis: AsyncStorage ist nicht installiert, daher werden Pläne beim Neuladen der App zurückgesetzt.",
+    "calendarMissing": "Die Kalender-Komponente ist nicht installiert. Für die Monatsansicht installiere react-native-calendars.",
+    "emptyTitle": "Noch keine Pläne",
+    "emptyBody": "Tippe auf + Neu und füge den ersten Plan für diesen Tag hinzu.",
+    "titleRequired": "Titel ist erforderlich.",
+    "timeInvalid": "Die Uhrzeit muss HH:MM sein (z.B. 1630).",
+    "pickSomeone": "Wähle mindestens ein Mitglied aus.",
+    "deleteConfirm": "Diesen Eintrag löschen?"
   }
 };
 
@@ -3283,67 +3241,68 @@ const es = {
     }
   },
   "home": {
-    "anytimeHint": "Sin fecha límite",
-    "scope": {
-      "family": "Familia",
-      "kids": "Niños"
+    "title": "Tareas diarias",
+    "subtitle": "Vista rápida y enfoque",
+    "plannerToday": "Planificador — hoy",
+    "tasksLatest": "Tareas — más recientes",
+    "shopping": "Compras",
+    "shoppingCartCount": "Tienes {{count}} artículos en el carrito",
+    "viewMore": "Ver más",
+    "noFamilyShopping": "Únete o crea una familia para usar la lista de compras compartida.",
+    "noTime": "En cualquier momento",
+    "shoppingEmpty": "La lista de compras está vacía",
+  },
+
+  "planner": {
+    "title": "Planificador",
+    "subtitle": "Tu plan diario sencillo (privado o compartido).",
+    "selectedDay": "Seleccionado",
+    "hintPickDay": "Elige un día en el calendario y luego pulsa + Nuevo",
+    "newBtn": "+ Nuevo",
+    "newTitle": "Nuevo plan",
+    "editTitle": "Editar plan",
+    "placeholder": {
+      "title": "p. ej. médico, pagar facturas, llamar a la abuela"
     },
-    "stats": {
-      "active": "Activas",
-      "review": "Pendiente de aprobación",
-      "done": "Hechas"
+    "timeLabel": "Hora (opcional)",
+    "timePlaceholder": "HHMM (p. ej. 1630)",
+    "anytime": "Cualquiera",
+    "for": "Para",
+    "shared": "Compartido",
+    "forWho": "¿Para quién?",
+    "family": "Familia",
+    "someone": "Alguien",
+    "assigned": {
+      "all": "Familia",
+      "some": "Seleccionado"
     },
-    "doneHint": "Completadas recientemente",
-    "emptyTitle": "No hay tareas",
-    "reviewTitle": "Pendiente de aprobación",
-    "todayHint": "Enfoque",
-    "anytimeTitle": "En cualquier momento",
-    "filterPrefix": "Filtro",
-    "emptySubtitle": "Añade tareas para empezar.",
-    "doneTitle": "Hechas",
-    "familyPrefix": "Familia",
-    "reviewHint": "Esperando tu decisión",
-    "badge": {
-      "attention": "ATEN"
-    },
-    "reviewHintChild": "Esperando al padre/madre",
-    "todayTitle": "Hoy",
-    "tagline": "Tareas familiares, sin complicaciones",
-    "upcomingHint": "Próximos 7 días",
-    "upcomingTitle": "Próximas",
-    "subtitle": "Vista rápida",
-    "info": {
-      "scope": {
-        "title": "Alcance",
-        "body": "Elige en qué tareas quieres enfocarte. Familia muestra todas las tareas, Niños muestra solo las tareas de los niños."
-      },
-      "review": {
-        "title": "Revisión",
-        "body": {
-          "parent": "Padre/Madre: confirma que la tarea está hecha.",
-          "child": "Niño: envía la tarea de vuelta a la lista para cambios."
-        }
-      },
-      "actions": {
-        "title": "Acciones de la tarea",
-        "open": "Abierta: la tarea está disponible para reclamar.",
-        "claimed": "Reclamada: alguien está trabajando en ella.",
-        "review": {
-          "parent": "Pendiente de aprobación: el padre/madre debe aprobar o rechazar.",
-          "child": "Pendiente de aprobación: esperando la decisión del padre/madre."
-        }
-      }
-    },
-    "brandTitle": "FamiGo",
-    "scopeHint": {
-      "me": "Tareas para ti",
-      "kids": "Tareas para todos los niños",
-      "family": "Todas las tareas de la familia"
-    }
+    "someHint": "Consejo: selecciona uno o más miembros. (Pulsación larga para borrar)",
+    "noFamilyHint": "Consejo: únete a una familia para compartir un plan con un miembro.",
+    "noStorage": "Nota: AsyncStorage no está instalado, así que los planes se reiniciarán al recargar la app.",
+    "calendarMissing": "El componente de calendario no está instalado. Si quieres vista mensual, instala react-native-calendars.",
+    "emptyTitle": "Aún no hay planes",
+    "emptyBody": "Pulsa + Nuevo y añade tu primer plan para este día.",
+    "titleRequired": "El título es obligatorio.",
+    "timeInvalid": "La hora debe ser HH:MM (p. ej. 1630).",
+    "pickSomeone": "Elige al menos un miembro.",
+    "deleteConfirm": "¿Eliminar este elemento?"
   }
 };
 
 const rs = {
+  "home": {
+    "title": "Dnevne obaveze",
+    "subtitle": "Brz pregled i fokus",
+    "plannerToday": "Planer — danas",
+    "tasksLatest": "Zadaci — najnoviji",
+    "shopping": "Kupovina",
+    "shoppingCartCount": "Imaš {{count}} stavki u korpi",
+    "viewMore": "Vidi više",
+    "noFamilyShopping": "Pridruži se ili napravi porodicu da koristiš zajedničku listu kupovine.",
+    "noTime": "Bilo kada",
+    "shoppingEmpty": "Lista kupovine je prazna",
+  },
+
   "tabs": {
     "home": "Danas",
     "members": "Članovi",
@@ -3820,6 +3779,41 @@ const rs = {
       "kids": "Zadaci za svu decu",
       "family": "Svi porodični zadaci"
     }
+  }
+,
+  "planner": {
+    "title": "Planer",
+    "subtitle": "Tvoj jednostavan dnevni plan (privatno ili deljeno).",
+    "selectedDay": "Izabrano",
+    "hintPickDay": "Izaberi dan na kalendaru, zatim tapni + Novo",
+    "newBtn": "+ Novo",
+    "newTitle": "Novi plan",
+    "editTitle": "Uredi plan",
+    "placeholder": {
+      "title": "npr. doktor, platiti račune, pozvati baku"
+    },
+    "timeLabel": "Vreme (opciono)",
+    "timePlaceholder": "HHMM (npr. 1630)",
+    "anytime": "Bilo kad",
+    "for": "Za",
+    "shared": "Deljeno",
+    "forWho": "Za koga?",
+    "family": "Porodica",
+    "someone": "Neko",
+    "assigned": {
+      "all": "Porodica",
+      "some": "Izabrano"
+    },
+    "someHint": "Savet: izaberi jednog ili više članova. (Dug pritisak briše)",
+    "noFamilyHint": "Savet: pridruži se porodici da deliš plan sa članom.",
+    "noStorage": "Napomena: AsyncStorage nije instaliran, pa će se planovi resetovati kada se aplikacija ponovo učita.",
+    "calendarMissing": "Komponenta kalendara nije instalirana. Ako želiš mesečni prikaz, instaliraj react-native-calendars.",
+    "emptyTitle": "Još nema planova",
+    "emptyBody": "Tapni + Novo i dodaj prvi plan za ovaj dan.",
+    "titleRequired": "Naslov je obavezan.",
+    "timeInvalid": "Vreme mora biti HH:MM (npr. 1630).",
+    "pickSomeone": "Izaberi bar jednog člana.",
+    "deleteConfirm": "Obrisati ovu stavku?"
   }
 };
 

@@ -14,6 +14,8 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 
+import { FONT, LETTER_SPACING } from "../../lib/typography";
+
 import { Screen } from "../../src/ui/components/Screen";
 import { Card } from "../../src/ui/components/Card";
 import { Button } from "../../src/ui/components/Button";
@@ -52,6 +54,12 @@ const AVATARS: Record<string, any> = {
   girl: require("../../assets/avatars/girl.png"),
   boy: require("../../assets/avatars/boy.png"),
 };
+
+const TYPO = {
+  title: { fontFamily: FONT.title, letterSpacing: LETTER_SPACING.title },
+  body: { fontFamily: FONT.body, letterSpacing: LETTER_SPACING.body },
+};
+
 
 function resolveAvatarKey(m: { role?: string; gender?: string; avatarKey?: string }): "mom" | "dad" | "girl" | "boy" {
   const role = m?.role === "child" ? "child" : "parent";
@@ -137,10 +145,10 @@ function StatPill({
       <View style={styles.statAvatarWrap}>
         <Image source={image} style={styles.statAvatarImg} resizeMode="contain" />
       </View>
-      <Text style={styles.statCardValue} numberOfLines={1}>
+      <Text style={[styles.statCardValue, TYPO.title]} numberOfLines={1}>
         {String(value)}
       </Text>
-      <Text style={styles.statCardLabel} numberOfLines={1}>
+      <Text style={[styles.statCardLabel, TYPO.body]} numberOfLines={1}>
         {label}
       </Text>
     </View>
@@ -207,7 +215,7 @@ function RolePill({
         ]}
       >
         <Ionicons name={icon} size={16} color={active ? primary : theme.colors.muted} />
-        <Text style={[styles.rolePillText, active ? { color: primary } : null]}>{label}</Text>
+        <Text style={[styles.rolePillText, TYPO.body, active ? { color: primary } : null]}>{label}</Text>
       </View>
     </Pressable>
   );
@@ -496,10 +504,10 @@ export default function MembersScreen() {
         <View style={styles.fixedTop}>
           <View style={styles.heroWrap}>
             <View style={styles.heroCard}>
-              <Text style={styles.heroHello} numberOfLines={1}>
+              <Text style={[styles.heroHello, TYPO.title]} numberOfLines={1}>
                 {tr("members.hello", "Hello")}, {myName}! 👋
               </Text>
-              <Text style={styles.heroSub}>
+              <Text style={[styles.heroSub, TYPO.body]}>
                 {tr("members.overview", "Here's an overview of your family activities.")}
               </Text>
 
@@ -543,7 +551,7 @@ export default function MembersScreen() {
           </View>
 
           {isParent ? (
-            <Text style={styles.editHint}>
+            <Text style={[styles.editHint, TYPO.body]}>
               {tr("members.editHintLongPress", "To edit a member, press and hold their card.")}
             </Text>
           ) : null}
@@ -592,10 +600,10 @@ export default function MembersScreen() {
                     </View>
 
                     <View style={{ flex: 1, minWidth: 0 }}>
-                      <Text style={styles.memberName} numberOfLines={2}>
+                      <Text style={[styles.memberName, TYPO.title]} numberOfLines={2}>
                         {m.name}
                       </Text>
-                      <Text style={styles.memberRole} numberOfLines={1}>
+                      <Text style={[styles.memberRole, TYPO.body]} numberOfLines={1}>
                         {roleLabel}
                       </Text>
                     </View>
@@ -610,16 +618,16 @@ export default function MembersScreen() {
         {/* Actions bottom sheet */}
         <BottomSheet visible={actionsOpen} onClose={() => setActionsOpen(false)}>
           <Card>
-            <Text style={{ fontSize: 18, fontWeight: "900", color: theme.colors.text }}>
+            <Text style={[{ fontSize: 18, fontWeight: "900", color: theme.colors.text }, TYPO.title]}>
               {selected?.name ?? tr("members.memberFallback", "Member")}
             </Text>
-            <Text style={{ color: theme.colors.muted, marginTop: 6 }}>
+            <Text style={[{ color: theme.colors.muted, marginTop: 6 }, TYPO.body]}>
               {tr("members.editMember", "Edit member")}
             </Text>
 
             {isParent ? (
               <View style={{ marginTop: 12 }}>
-                <Text style={{ fontWeight: "900", color: theme.colors.text, marginBottom: 8 }}>
+                <Text style={[{ fontWeight: "900", color: theme.colors.text, marginBottom: 8 }, TYPO.title]}>
                   {tr("members.roleTitle", "Role")}
                 </Text>
 
@@ -648,7 +656,7 @@ export default function MembersScreen() {
                 </View>
 
                 {selectedIsLastParent && selected?.role === "parent" ? (
-                  <Text style={{ marginTop: 10, color: theme.colors.muted, fontSize: 12, fontWeight: "700" }}>
+                  <Text style={[{ marginTop: 10, color: theme.colors.muted, fontSize: 12, fontWeight: "700" }, TYPO.body]}>
                     {tr("members.lastParentNotice", "This is the last parent, so you cannot change their role or remove them.")}
                   </Text>
                 ) : null}
@@ -687,7 +695,7 @@ export default function MembersScreen() {
             <Pressable style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.35)" }} onPress={() => setRenameOpen(false)}>
               <Pressable onPress={() => {}} style={{ marginTop: "auto", padding: 16 }}>
                 <Card>
-                  <Text style={{ fontSize: 18, fontWeight: "900", color: theme.colors.text }}>
+                  <Text style={[{ fontSize: 18, fontWeight: "900", color: theme.colors.text }, TYPO.title]}>
                     {tr("common.rename", "Rename")}
                   </Text>
 
@@ -697,7 +705,7 @@ export default function MembersScreen() {
                     placeholder={tr("members.newNamePlaceholder", "New name")}
                     placeholderTextColor={theme.colors.muted}
                     autoCapitalize="words"
-                    style={styles.input}
+                    style={[styles.input, TYPO.body]}
                   />
 
                   <View style={{ flexDirection: "row", gap: 10, marginTop: 14 }}>
@@ -744,7 +752,7 @@ function PressableFilter({
         pressed ? { opacity: 0.92 } : null,
       ]}
     >
-      <Text style={[styles.segText, active ? { color: "#fff" } : null]} numberOfLines={1}>
+      <Text style={[styles.segText, TYPO.body, active ? { color: "#fff" } : null]} numberOfLines={1}>
         {label}
       </Text>
     </Pressable>

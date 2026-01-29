@@ -6,16 +6,16 @@
     ],
     "name": "famigo",
     "slug": "famigo",
-    "version": "5.1.1",
+    "version": "5.2.2",
     "orientation": "portrait",
     "icon": "./assets/images/famigo-icon.png",
     "scheme": "famigo",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
-      "supportsTablet": true,
+      "supportsTablet": false,
       "bundleIdentifier": "com.agrofarm.famigo",
-      "buildNumber": "5",
+      "buildNumber": "9",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
       }
@@ -26,11 +26,11 @@
         "foregroundImage": "./assets/images/famigo-adaptive-icon.png",
         "backgroundImage": "./assets/images/famigo-adaptive-icon-background.png"
       },
-      "edgeToEdgeEnabled": true,
+      "edgeToEdgeEnabled": false,
       "predictiveBackGestureEnabled": false,
       "softwareKeyboardLayoutMode": "resize",
-      "package": "com.agrofarm.famigo",
-      "versionCode": 24
+      "package": "com.famigo.app",
+      "versionCode": 26
     },
     "web": {
       "output": "static",
@@ -51,7 +51,16 @@
         }
       ],
       "expo-localization",
-      "@react-native-community/datetimepicker"
+      "@react-native-community/datetimepicker",
+      "expo-font",
+      [
+        "expo-build-properties",
+        {
+          "ios": {
+            "useModularHeaders": true
+          }
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,
