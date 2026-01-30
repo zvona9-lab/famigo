@@ -7,6 +7,10 @@ module.exports = ({ config }) => {
     ...appJson.expo,
   };
 
+  // ✅ Važno: omogući iOS (Windows ne može generirati iOS projekt,
+  // ali EAS Build mora znati da je iOS platforma uključena)
+  merged.platforms = ["ios", "android"];
+
   merged.plugins = [
     "expo-router",
     [
@@ -25,7 +29,10 @@ module.exports = ({ config }) => {
     [
       "expo-build-properties",
       {
-        ios: {},
+        ios: {
+          useFrameworks: "static",
+          useModularHeaders: true,
+        },
       },
     ],
     require("./plugins/withNonModularHeadersFix"),
