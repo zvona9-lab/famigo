@@ -1,86 +1,116 @@
 // plugins/withNonModularHeadersFix.js
-const { withPodfile } = require("@expo/config-plugins");
+// Podfile fixes + Reanimated podspec compatibility for old architecture (newArchEnabled: false)
 
-function ensureUseModularHeaders(contents) {
-  // Ako već postoji, ne diramo
-  if (/\buse_modular_headers!\b/.test(contents)) return contents;
+const { withDangerousMod } = require("@expo/config-plugins");
+const fs = require("fs");
+const path = require("path");
 
-  // Najsigurnije: ubaci odmah nakon platform :ios, ...
-  const platformRegex = /^\s*platform\s*:ios[^\n]*\n/m;
-  const match = contents.match(platformRegex);
+function ensureUseModularHeaders(podfile) {
+  if (/\buse_modular_headers!\b/.test(podfile)) return podfile;
 
-  if (match) {
-    return contents.replace(platformRegex, (m) => `${m}use_modular_headers!\n`);
+  const platformLine = podfile.match(/^\s*platform\s*:ios[^\n]*\n/m);
+  if (platformLine) {
+    return podfile.replace(platformLine[0], `${platformLine[0]}use_modular_headers!\n`);
+  }
+  return `use_modular_headers!\n${podfile}`;
+}
+
+function ensurePostInstallHook(podfile, snippet) {
+  if (podfile.includes(snippet.trim())) return podfile;
+
+  const postInstallStart = podfile.match(/^\s*post_install\s+do\s+\|installer\|\s*\n/m);
+  if (postInstallStart) {
+    return podfile.replace(postInstallStart[0], `${postInstallStart[0]}${snippet}\n`);
   }
 
-  // Fallback: ubaci na vrh
-  return `use_modular_headers!\n${contents}`;
+  const block = `\npost_install do |installer|\n${snippet}\nend\n`;
+  return `${podfile.trim()}\n${block}`;
+}
+
+function patchReanimatedPodspec(projectRoot) {
+  // In some versions, RNReanimated.podspec enforces New Architecture and fails when RCT_NEW_ARCH_ENABLED=0.
+  // We keep newArchEnabled=false (for RNFirebase), so we patch out the assertion.
+  const podspecPath = path.join(projectRoot, "node_modules", "react-native-reanimated", "RNReanimated.podspec");
+
+  if (!fs.existsSync(podspecPath)) {
+    console.log(`[withNonModularHeadersFix] Reanimated podspec not found (skip): ${podspecPath}`);
+    return;
+  }
+
+  let s = fs.readFileSync(podspecPath, "utf8");
+  if (!s.includes("assert_new_architecture_enabled")) {
+    console.log("[withNonModularHeadersFix] Reanimated podspec has no new-arch assertion (skip)");
+    return;
+  }
+
+  // Comment out any line that calls assert_new_architecture_enabled(...)
+  const updated = s
+    .split("\n")
+    .map((line) => {
+      if (line.includes("assert_new_architecture_enabled(")) {
+        if (line.trim().startsWith("#")) return line;
+        return line.replace(/^(\s*)/, "$1# ");
+      }
+      return line;
+    })
+    .join("\n");
+
+  if (updated !== s) {
+    fs.writeFileSync(podspecPath, updated, "utf8");
+    console.log("[withNonModularHeadersFix] Patched RNReanimated.podspec to disable new-arch assertion");
+  } else {
+    console.log("[withNonModularHeadersFix] RNReanimated.podspec already patched");
+  }
 }
 
 module.exports = function withNonModularHeadersFix(config) {
-  return withPodfile(config, (config) => {
-    let contents = config.modResults.contents;
+  return withDangerousMod(config, [
+    "ios",
+    async (config) => {
+      const iosDir = config.modRequest.platformProjectRoot;
+      const projectRoot = config.modRequest.projectRoot;
+      const podfilePath = path.join(iosDir, "Podfile");
 
-    // ✅ NOVO: globalni use_modular_headers!
-    contents = ensureUseModularHeaders(contents);
+      // 0) Patch Reanimated podspec BEFORE pod install
+      patchReanimatedPodspec(projectRoot);
 
-    // Postojeći fix: CLANG_ALLOW_NON_MODULAR...
-    const clangSnippet = `
-  installer.pods_project.targets.each do |t|
-    t.build_configurations.each do |config|
-      config.build_settings['CLANG_ALLOW_NON_MODULAR_INCLUDES_IN_FRAMEWORK_MODULES'] = 'YES'
-    end
-  end
-`;
+      if (!fs.existsSync(podfilePath)) {
+        console.warn(`[withNonModularHeadersFix] Podfile not found at: ${podfilePath}`);
+        return config;
+      }
 
-    // ✅ RNFirebase fix (Xcode modules): spriječi "RCTBridgeModule must be imported..." grešku
-    // Ide u post_install i radi samo za RNFB* targete.
-    const rnfbSnippet = `
-  # RNFB modules fix (EAS/Xcode)
-  installer.pods_project.targets.each do |target|
-    if target.name.start_with?('RNFB')
-      target.build_configurations.each do |config|
-        config.build_settings['CLANG_ENABLE_MODULES'] = 'NO'
-      end
-    end
-  end
-`;
+      let podfile = fs.readFileSync(podfilePath, "utf8");
 
-    const hasPostInstall = contents.includes("post_install do |installer|");
+      // 1) Global modular headers
+      podfile = ensureUseModularHeaders(podfile);
 
-    // 1) Osiguraj post_install blok postoji
-    if (!hasPostInstall) {
-      contents += `
+      // 2) post_install fixes
+      const NON_MODULAR_FIX = [
+        "  # Allow non-modular includes in framework modules (Firebase / GoogleUtilities)",
+        "  installer.pods_project.targets.each do |target|",
+        "    target.build_configurations.each do |config|",
+        "      config.build_settings['CLANG_ALLOW_NON_MODULAR_INCLUDES_IN_FRAMEWORK_MODULES'] = 'YES'",
+        "    end",
+        "  end",
+      ].join("\n");
 
-post_install do |installer|
-end
-`;
-    }
+      const RNFB_XCODE_WORKAROUND = [
+        "  # RNFirebase + Xcode modules workaround (scoped to RNFBApp)",
+        "  installer.pods_project.targets.each do |target|",
+        "    next unless target.name == 'RNFBApp'",
+        "    target.build_configurations.each do |config|",
+        "      # Avoid \"must be imported from module 'RNFBApp.RNFBAppModule'\" errors",
+        "      config.build_settings['CLANG_ENABLE_MODULES'] = 'NO'",
+        "    end",
+        "  end",
+      ].join("\n");
 
-    // 2) Ubaci clangSnippet ako već nije prisutan
-    if (!contents.includes("CLANG_ALLOW_NON_MODULAR_INCLUDES_IN_FRAMEWORK_MODULES")) {
-      contents = contents.replace(
-        /post_install do \|installer\|\n/,
-        (m) => m + clangSnippet
-      );
-    }
+      podfile = ensurePostInstallHook(podfile, `${NON_MODULAR_FIX}\n\n${RNFB_XCODE_WORKAROUND}`);
 
-    // 3) Ubaci RNFB fix ako već nije prisutan (marker)
-    if (!contents.includes("RNFB modules fix (EAS/Xcode)")) {
-      contents = contents.replace(
-        /post_install do \|installer\|\n/,
-        (m) => m + rnfbSnippet
-      );
-    }
+      fs.writeFileSync(podfilePath, podfile, "utf8");
+      console.log("[withNonModularHeadersFix] Podfile updated (use_modular_headers + post_install fixes)");
 
-  installer.pods_project.targets.each do |t|
-    t.build_configurations.each do |config|
-      config.build_settings['CLANG_ALLOW_NON_MODULAR_INCLUDES_IN_FRAMEWORK_MODULES'] = 'YES'
-    end
-  end
-`;
-
-        config.modResults.contents = contents;
-    return config;
-  });
+      return config;
+    },
+  ]);
 };
