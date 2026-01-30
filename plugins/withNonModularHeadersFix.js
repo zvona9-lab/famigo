@@ -25,13 +25,7 @@ module.exports = function withNonModularHeadersFix(config) {
     contents = ensureUseModularHeaders(contents);
 
     // Postojeći fix: CLANG_ALLOW_NON_MODULAR...
-    // Ako već postoji, ne diramo (ali smo gore možda dodali use_modular_headers!)
-    if (contents.includes("CLANG_ALLOW_NON_MODULAR_INCLUDES_IN_FRAMEWORK_MODULES")) {
-      config.modResults.contents = contents;
-      return config;
-    }
-
-    const snippet = `
+    const clangSnippet = `
   installer.pods_project.targets.each do |t|
     t.build_configurations.each do |config|
       config.build_settings['CLANG_ALLOW_NON_MODULAR_INCLUDES_IN_FRAMEWORK_MODULES'] = 'YES'
@@ -39,23 +33,54 @@ module.exports = function withNonModularHeadersFix(config) {
   end
 `;
 
-    if (contents.includes("post_install do |installer|")) {
-      // Ubaci odmah nakon post_install linije
-      contents = contents.replace(
-        /post_install do \|installer\|\n/,
-        (m) => m + snippet
-      );
-    } else {
-      // Dodaj cijeli post_install blok na kraj
+    // ✅ RNFirebase fix (Xcode modules): spriječi "RCTBridgeModule must be imported..." grešku
+    // Ide u post_install i radi samo za RNFB* targete.
+    const rnfbSnippet = `
+  # RNFB modules fix (EAS/Xcode)
+  installer.pods_project.targets.each do |target|
+    if target.name.start_with?('RNFB')
+      target.build_configurations.each do |config|
+        config.build_settings['CLANG_ENABLE_MODULES'] = 'NO'
+      end
+    end
+  end
+`;
+
+    const hasPostInstall = contents.includes("post_install do |installer|");
+
+    // 1) Osiguraj post_install blok postoji
+    if (!hasPostInstall) {
       contents += `
 
 post_install do |installer|
-${snippet}
 end
 `;
     }
 
-    config.modResults.contents = contents;
+    // 2) Ubaci clangSnippet ako već nije prisutan
+    if (!contents.includes("CLANG_ALLOW_NON_MODULAR_INCLUDES_IN_FRAMEWORK_MODULES")) {
+      contents = contents.replace(
+        /post_install do \|installer\|\n/,
+        (m) => m + clangSnippet
+      );
+    }
+
+    // 3) Ubaci RNFB fix ako već nije prisutan (marker)
+    if (!contents.includes("RNFB modules fix (EAS/Xcode)")) {
+      contents = contents.replace(
+        /post_install do \|installer\|\n/,
+        (m) => m + rnfbSnippet
+      );
+    }
+
+  installer.pods_project.targets.each do |t|
+    t.build_configurations.each do |config|
+      config.build_settings['CLANG_ALLOW_NON_MODULAR_INCLUDES_IN_FRAMEWORK_MODULES'] = 'YES'
+    end
+  end
+`;
+
+        config.modResults.contents = contents;
     return config;
   });
 };
