@@ -11,6 +11,9 @@ module.exports = ({ config }) => {
   // ali EAS Build mora znati da je iOS platforma uključena)
   merged.platforms = ["ios", "android"];
 
+
+  // ✅ Važno: isključi New Architecture (RNFirebase kompatibilnost)
+  merged.newArchEnabled = false;
   merged.plugins = [
     "expo-router",
     [

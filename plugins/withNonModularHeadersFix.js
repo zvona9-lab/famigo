@@ -1,5 +1,10 @@
 // plugins/withNonModularHeadersFix.js
-// Podfile fixes + Reanimated podspec compatibility for old architecture (newArchEnabled: false)
+// Podfile fixes + compatibility patches for old architecture (newArchEnabled: false)
+// - Adds global `use_modular_headers!`
+// - Adds post_install build settings for Firebase/GoogleUtilities + RNFBApp workaround
+// - Patches podspec assertions that force New Architecture in:
+//    * react-native-reanimated (RNReanimated.podspec)
+//    * react-native-worklets (RNWorklets.podspec)
 
 const { withDangerousMod } = require("@expo/config-plugins");
 const fs = require("fs");
@@ -27,40 +32,59 @@ function ensurePostInstallHook(podfile, snippet) {
   return `${podfile.trim()}\n${block}`;
 }
 
-function patchReanimatedPodspec(projectRoot) {
-  // In some versions, RNReanimated.podspec enforces New Architecture and fails when RCT_NEW_ARCH_ENABLED=0.
-  // We keep newArchEnabled=false (for RNFirebase), so we patch out the assertion.
-  const podspecPath = path.join(projectRoot, "node_modules", "react-native-reanimated", "RNReanimated.podspec");
-
-  if (!fs.existsSync(podspecPath)) {
-    console.log(`[withNonModularHeadersFix] Reanimated podspec not found (skip): ${podspecPath}`);
+function commentOutLinesContaining(filePath, needles, label) {
+  if (!fs.existsSync(filePath)) {
+    console.log(`[withNonModularHeadersFix] ${label} not found (skip): ${filePath}`);
     return;
   }
+  let s = fs.readFileSync(filePath, "utf8");
+  let changed = false;
 
-  let s = fs.readFileSync(podspecPath, "utf8");
-  if (!s.includes("assert_new_architecture_enabled")) {
-    console.log("[withNonModularHeadersFix] Reanimated podspec has no new-arch assertion (skip)");
-    return;
-  }
-
-  // Comment out any line that calls assert_new_architecture_enabled(...)
-  const updated = s
-    .split("\n")
-    .map((line) => {
-      if (line.includes("assert_new_architecture_enabled(")) {
-        if (line.trim().startsWith("#")) return line;
+  const lines = s.split("\n").map((line) => {
+    for (const needle of needles) {
+      if (line.includes(needle)) {
+        if (line.trim().startsWith("#")) return line; // already commented
+        changed = true;
         return line.replace(/^(\s*)/, "$1# ");
       }
-      return line;
-    })
-    .join("\n");
+    }
+    return line;
+  });
 
-  if (updated !== s) {
-    fs.writeFileSync(podspecPath, updated, "utf8");
-    console.log("[withNonModularHeadersFix] Patched RNReanimated.podspec to disable new-arch assertion");
+  if (changed) {
+    fs.writeFileSync(filePath, lines.join("\n"), "utf8");
+    console.log(`[withNonModularHeadersFix] Patched ${label} to bypass New Architecture assertion`);
   } else {
-    console.log("[withNonModularHeadersFix] RNReanimated.podspec already patched");
+    console.log(`[withNonModularHeadersFix] ${label} already compatible (no assertion found / already patched)`);
   }
+}
+
+function patchPodspecsForOldArch(projectRoot) {
+  // 1) Reanimated
+  const reanimatedPodspec = path.join(
+    projectRoot,
+    "node_modules",
+    "react-native-reanimated",
+    "RNReanimated.podspec"
+  );
+  commentOutLinesContaining(
+    reanimatedPodspec,
+    ["assert_new_architecture_enabled("],
+    "RNReanimated.podspec"
+  );
+
+  // 2) Worklets (react-native-worklets)
+  const workletsPodspec = path.join(
+    projectRoot,
+    "node_modules",
+    "react-native-worklets",
+    "RNWorklets.podspec"
+  );
+  commentOutLinesContaining(
+    workletsPodspec,
+    ["worklets_assert_new_architecture_enabled("],
+    "RNWorklets.podspec"
+  );
 }
 
 module.exports = function withNonModularHeadersFix(config) {
@@ -71,8 +95,8 @@ module.exports = function withNonModularHeadersFix(config) {
       const projectRoot = config.modRequest.projectRoot;
       const podfilePath = path.join(iosDir, "Podfile");
 
-      // 0) Patch Reanimated podspec BEFORE pod install
-      patchReanimatedPodspec(projectRoot);
+      // 0) Patch podspecs BEFORE pod install
+      patchPodspecsForOldArch(projectRoot);
 
       if (!fs.existsSync(podfilePath)) {
         console.warn(`[withNonModularHeadersFix] Podfile not found at: ${podfilePath}`);
