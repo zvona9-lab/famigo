@@ -1,0 +1,25 @@
+name: Planner evening enqueue (20:00 Zagreb)
+
+on:
+  schedule:
+    # 20:00 Europe/Zagreb = 19:00 UTC (zimi). Ako bude ljetno računanje, javit ćeš mi pa prebacimo na 18:00.
+    - cron: "0 19 * * *"
+  workflow_dispatch:
+
+jobs:
+  enqueue:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Enqueue planner reminders for tomorrow
+        run: |
+          set -euo pipefail
+
+          BASE="${{ secrets.SUPABASE_FUNCTION_URL }}"
+          BASE="${BASE%%/functions/v1/*}"
+
+          # pozovi DB RPC koja ubacuje notification_queue redove
+          curl -fS -X POST "${BASE}/rest/v1/rpc/enqueue_planner_evening_reminders" \
+            -H "Content-Type: application/json" \
+            -H "apikey: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}" \
+            -H "Authorization: Bearer ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}" \
+            -d "{}"
