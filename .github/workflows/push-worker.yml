@@ -10,8 +10,9 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Call Supabase push-worker
+       - name: Call Supabase push-worker
         run: |
-          curl -i -X POST "${{ secrets.SUPABASE_FUNCTION_URL }}" \
+          curl -fS -X POST "${{ secrets.SUPABASE_FUNCTION_URL }}" \
             -H "Content-Type: application/json" \
+            -H "Authorization: Bearer ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}" \
             -H "x-internal-secret: ${{ secrets.PUSH_WORKER_SECRET }}"
