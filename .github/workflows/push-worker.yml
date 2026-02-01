@@ -8,9 +8,8 @@ on:
 jobs:
   run-push-worker:
     runs-on: ubuntu-latest
-
     steps:
-       - name: Call Supabase push-worker
+      - name: Call Supabase push-worker
         run: |
           curl -fS -X POST "${{ secrets.SUPABASE_FUNCTION_URL }}" \
             -H "Content-Type: application/json" \
