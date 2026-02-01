@@ -1,0 +1,25 @@
+name: Cleanup notification_queue
+
+on:
+  schedule:
+    # svaki dan u 03:17 UTC
+    - cron: "17 3 * * *"
+  workflow_dispatch:
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Delete processed rows older than 30 days
+        run: |
+          set -euo pipefail
+
+          BASE="${{ secrets.SUPABASE_FUNCTION_URL }}"
+          BASE="${BASE%%/functions/v1/*}"
+
+          CUTOFF="$(date -u -d '30 days ago' +"%Y-%m-%dT%H:%M:%SZ")"
+
+          curl -fS -X DELETE "${BASE}/rest/v1/notification_queue?processed=eq.true&processed_at=lt.${CUTOFF}" \
+            -H "apikey: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}" \
+            -H "Authorization: Bearer ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}" \
+            -H "Prefer: return=minimal"
