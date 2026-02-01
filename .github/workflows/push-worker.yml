@@ -12,6 +12,6 @@ jobs:
     steps:
       - name: Call Supabase push-worker
         run: |
-          curl -fS -X POST "${{ secrets.SUPABASE_FUNCTION_URL }}" \
+          curl -i -X POST "${{ secrets.SUPABASE_FUNCTION_URL }}" \
             -H "Content-Type: application/json" \
             -H "x-internal-secret: ${{ secrets.PUSH_WORKER_SECRET }}"
