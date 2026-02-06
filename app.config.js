@@ -1,45 +1,15 @@
-const appJson = require("./app.json");
+/**
+ * Famigo – app.config.js
+ * Supabase env wired correctly for Expo
+ */
 
-module.exports = ({ config }) => {
-  // merge: prvo expo config, pa app.json, pa osiguraj plugins
-  const merged = {
-    ...config,
-    ...appJson.expo,
-  };
+module.exports = ({ config }) => ({
+  ...config,
 
-  // ✅ Važno: omogući iOS (Windows ne može generirati iOS projekt,
-  // ali EAS Build mora znati da je iOS platforma uključena)
-  merged.platforms = ["ios", "android"];
+  extra: {
+    ...config.extra,
 
-
-  // ✅ Važno: isključi New Architecture (RNFirebase kompatibilnost)
-  merged.newArchEnabled = false;
-  merged.plugins = [
-    "expo-router",
-    [
-      "expo-splash-screen",
-      {
-        image: "./assets/images/splash-icon.png",
-        imageWidth: 200,
-        resizeMode: "contain",
-        backgroundColor: "#ffffff",
-        dark: { backgroundColor: "#000000" },
-      },
-    ],
-    "expo-localization",
-    "@react-native-community/datetimepicker",
-    "expo-font",
-    [
-      "expo-build-properties",
-      {
-        ios: {
-          useFrameworks: "static",
-          useModularHeaders: true,
-        },
-      },
-    ],
-    require("./plugins/withNonModularHeadersFix"),
-  ];
-
-  return merged;
-};
+    EXPO_PUBLIC_SUPABASE_URL: "https://tlfbqqdyfzlfqtanawbp.supabase.co",
+    EXPO_PUBLIC_SUPABASE_ANON_KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRsZmJxcWR5ZnpsZnF0YW5hd2JwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk4NzkyMzIsImV4cCI6MjA4NTQ1NTIzMn0.-5xG3GsB8w5huogv46_i_alJuRt88QUiEFog-XGTk_M",
+  },
+});
