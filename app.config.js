@@ -6,6 +6,9 @@
 module.exports = ({ config }) => ({
   ...config,
 
+  version: "9.9.9-debug",          // ⬅️ NAMJERNO UPADLJIVO
+  runtimeVersion: "9.9.9-debug",   // ⬅️ forsira novi bundle
+
   extra: {
     ...config.extra,
 
