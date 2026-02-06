@@ -1,6 +1,8 @@
 // plugins/withNonModularHeadersFix.js
 // Podfile fixes + compatibility patches for old architecture (newArchEnabled: false)
+// - Forces dynamic frameworks (use_frameworks! :linkage => :dynamic)
 // - Adds global `use_modular_headers!`
+// - Forces modular headers for FirebaseCoreInternal + GoogleUtilities
 // - Adds post_install build settings for Firebase/GoogleUtilities + RNFBApp workaround
 // - Patches podspec assertions that force New Architecture in:
 //    * react-native-reanimated (RNReanimated.podspec)
@@ -10,6 +12,25 @@ const { withDangerousMod } = require("@expo/config-plugins");
 const fs = require("fs");
 const path = require("path");
 
+function ensureUseFrameworksDynamic(podfile) {
+  // Already exists → normalize to dynamic
+  if (/^\s*use_frameworks!/m.test(podfile)) {
+    return podfile
+      .replace(/use_frameworks!\s*:linkage\s*=>\s*:static/g, "use_frameworks! :linkage => :dynamic")
+      .replace(/use_frameworks!\s*:linkage\s*=>\s*:dynamic/g, "use_frameworks! :linkage => :dynamic")
+      .replace(/^\s*use_frameworks!\s*$/gm, "use_frameworks! :linkage => :dynamic");
+  }
+
+  // Insert after platform line if possible
+  const platformLine = podfile.match(/^\s*platform\s*:ios[^\n]*\n/m);
+  if (platformLine) {
+    return podfile.replace(platformLine[0], `${platformLine[0]}use_frameworks! :linkage => :dynamic\n`);
+  }
+
+  // Fallback: top of file
+  return `use_frameworks! :linkage => :dynamic\n${podfile}`;
+}
+
 function ensureUseModularHeaders(podfile) {
   if (/\buse_modular_headers!\b/.test(podfile)) return podfile;
 
@@ -18,6 +39,34 @@ function ensureUseModularHeaders(podfile) {
     return podfile.replace(platformLine[0], `${platformLine[0]}use_modular_headers!\n`);
   }
   return `use_modular_headers!\n${podfile}`;
+}
+
+function ensureFirebasePodsModularHeaders(podfile) {
+  // Add only once
+  const hasFirebaseCoreInternal =
+    podfile.includes("pod 'FirebaseCoreInternal'") || podfile.includes('pod "FirebaseCoreInternal"');
+  const hasGoogleUtilities =
+    podfile.includes("pod 'GoogleUtilities'") || podfile.includes('pod "GoogleUtilities"');
+
+  if (hasFirebaseCoreInternal || hasGoogleUtilities) return podfile;
+
+  const snippet =
+    "  pod 'GoogleUtilities', :modular_headers => true\n" +
+    "  pod 'FirebaseCoreInternal', :modular_headers => true\n";
+
+  // Prefer placing inside target, right after use_modular_headers!
+  if (/^\s*use_modular_headers!\b.*$/m.test(podfile)) {
+    return podfile.replace(/(^\s*use_modular_headers!\b.*\n)/m, `$1${snippet}`);
+  }
+
+  // Fallback: place after first target line
+  const targetLine = podfile.match(/^\s*target ['"][^'"]+['"] do\s*\n/m);
+  if (targetLine) {
+    return podfile.replace(targetLine[0], `${targetLine[0]}${snippet}`);
+  }
+
+  // Last resort: top of file
+  return `${snippet}${podfile}`;
 }
 
 function ensurePostInstallHook(podfile, snippet) {
@@ -55,36 +104,20 @@ function commentOutLinesContaining(filePath, needles, label) {
     fs.writeFileSync(filePath, lines.join("\n"), "utf8");
     console.log(`[withNonModularHeadersFix] Patched ${label} to bypass New Architecture assertion`);
   } else {
-    console.log(`[withNonModularHeadersFix] ${label} already compatible (no assertion found / already patched)`);
+    console.log(
+      `[withNonModularHeadersFix] ${label} already compatible (no assertion found / already patched)`
+    );
   }
 }
 
 function patchPodspecsForOldArch(projectRoot) {
   // 1) Reanimated
-  const reanimatedPodspec = path.join(
-    projectRoot,
-    "node_modules",
-    "react-native-reanimated",
-    "RNReanimated.podspec"
-  );
-  commentOutLinesContaining(
-    reanimatedPodspec,
-    ["assert_new_architecture_enabled("],
-    "RNReanimated.podspec"
-  );
+  const reanimatedPodspec = path.join(projectRoot, "node_modules", "react-native-reanimated", "RNReanimated.podspec");
+  commentOutLinesContaining(reanimatedPodspec, ["assert_new_architecture_enabled("], "RNReanimated.podspec");
 
   // 2) Worklets (react-native-worklets)
-  const workletsPodspec = path.join(
-    projectRoot,
-    "node_modules",
-    "react-native-worklets",
-    "RNWorklets.podspec"
-  );
-  commentOutLinesContaining(
-    workletsPodspec,
-    ["worklets_assert_new_architecture_enabled("],
-    "RNWorklets.podspec"
-  );
+  const workletsPodspec = path.join(projectRoot, "node_modules", "react-native-worklets", "RNWorklets.podspec");
+  commentOutLinesContaining(workletsPodspec, ["worklets_assert_new_architecture_enabled("], "RNWorklets.podspec");
 }
 
 module.exports = function withNonModularHeadersFix(config) {
@@ -105,10 +138,16 @@ module.exports = function withNonModularHeadersFix(config) {
 
       let podfile = fs.readFileSync(podfilePath, "utf8");
 
-      // 1) Global modular headers
+      // 1) Force dynamic frameworks FIRST (fixes "integrated as static libraries")
+      podfile = ensureUseFrameworksDynamic(podfile);
+
+      // 2) Global modular headers
       podfile = ensureUseModularHeaders(podfile);
 
-      // 2) post_install fixes
+      // 3) Force modular headers for Firebase pods that break the build
+      podfile = ensureFirebasePodsModularHeaders(podfile);
+
+      // 4) post_install fixes
       const NON_MODULAR_FIX = [
         "  # Allow non-modular includes in framework modules (Firebase / GoogleUtilities)",
         "  installer.pods_project.targets.each do |target|",
@@ -132,7 +171,7 @@ module.exports = function withNonModularHeadersFix(config) {
       podfile = ensurePostInstallHook(podfile, `${NON_MODULAR_FIX}\n\n${RNFB_XCODE_WORKAROUND}`);
 
       fs.writeFileSync(podfilePath, podfile, "utf8");
-      console.log("[withNonModularHeadersFix] Podfile updated (use_modular_headers + post_install fixes)");
+      console.log("[withNonModularHeadersFix] Podfile updated (dynamic frameworks + modular headers + post_install fixes)");
 
       return config;
     },
